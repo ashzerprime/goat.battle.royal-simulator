@@ -1,41 +1,43 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8" />
-  <title>Goat Battle Royale (3D test)</title>
+  <meta charset="UTF-8">
+  <title>Goat Battle Royale</title>
   <style>
-    html,body { margin:0; height:100%; overflow:hidden; background:#111; color:#fff; font-family:sans-serif; }
-    #menu { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.8); z-index:5; flex-direction:column; gap:8px; }
-    input, select, button { padding:8px; border-radius:6px; border:none; font-size:14px; }
-    #hud { position:absolute; left:8px; top:8px; z-index:4; background:rgba(0,0,0,0.3); padding:6px; border-radius:6px; }
-    #canvas3d { display:block; width:100vw; height:100vh; }
-    #endScreen { position:absolute; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,0.8); z-index:10; flex-direction:column; }
+    body { margin: 0; font-family: Arial; background: #eef; }
+    #menu, #endScreen { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px #000; }
+    #canvas3d { display: block; width: 100vw; height: 100vh; background: #88c; }
+    button { margin-top: 10px; padding: 5px 10px; }
   </style>
 </head>
 <body>
+  <!-- Menu -->
   <div id="menu">
-    <h1>🐐 Goat Battle Royale (3D)</h1>
-    <input id="pseudo" placeholder="Pseudo (max 15)" maxlength="15" />
-    <select id="controls">
-      <option value="wasd">Mode WASD</option>
-      <option value="zqsd">Mode ZQSD</option>
-    </select>
-    <label>Couleur chèvre: <input id="color" type="color" value="#ff9966" /></label>
-    <button id="startBtn">Rejoindre</button>
-    <p style="max-width:420px">Touches : avancer (Z/W), reculer (S), tourner (Q/A/D), sauter (Espace), sprinter (R), tirer (F). Mode sélectionnable.</p>
+    <h2>Goat Battle Royale</h2>
+    <label>Pseudo : <input type="text" id="pseudo" placeholder="Chèvre"></label><br>
+    <label>Couleur : <input type="color" id="color" value="#ff9966"></label><br>
+    <label>Touches : 
+      <select id="controls">
+        <option value="wasd">WASD</option>
+        <option value="zqsd">ZQSD</option>
+      </select>
+    </label><br>
+    <button id="startBtn">Jouer</button>
   </div>
 
-  <div id="hud">Vies: <span id="lives">3</span></div>
-  <div id="endScreen">
-    <h2 id="endText">Tu es mort</h2>
+  <!-- Écran de fin -->
+  <div id="endScreen" style="display:none;">
+    <h2 id="endText"></h2>
     <button id="backToMenu">Retour au menu</button>
   </div>
 
+  <!-- Canvas 3D / rendu -->
   <canvas id="canvas3d"></canvas>
 
-  <!-- Three.js from CDN -->
-  <script src="https://unpkg.com/three@0.154.0/build/three.min.js"></script>
-  <script src="/socket.io/socket.io.js"></script>
+  <!-- Socket.IO client -->
+  <script src="https://cdn.socket.io/4.7.1/socket.io.min.js"></script>
+
+  <!-- Ton main.js -->
   <script src="main.js"></script>
 </body>
 </html>
