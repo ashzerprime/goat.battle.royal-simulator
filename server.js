@@ -113,3 +113,10 @@ io.on('connection', (socket) => {
 app.get('/', (req, res) => res.send('Goat Battle WebSocket server running.'));
 
 server.listen(PORT, () => console.log('listening on', PORT));
+git init
+git add .
+git commit -m "init server"
+git branch -M main
+git remote add origin https://github.com/ashzerprime/goat-battle-server.git
+git push -u origin main
+
