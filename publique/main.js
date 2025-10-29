@@ -1,4 +1,4 @@
-// main.js - Goat Battle Royale 3D prototype
+// main.js - Goat Battle Royale 3D avec explosions et Top 1
 
 // ---- UI ----
 const menu = document.getElementById('menu');
@@ -9,153 +9,210 @@ const colorInput = document.getElementById('color');
 const livesSpan = document.getElementById('lives');
 const endScreen = document.getElementById('endScreen');
 const endText = document.getElementById('endText');
-const backToMenu = document.getElementById('backToMenu');
-const canvas = document.getElementById('canvas3d');
-const ctx3d = canvas;
 
 // ---- Variables ----
-let socket = null;
+let socket = io('https://goatbattleroyal-simulator-production.up.railway.app');
 let roomId = null;
 let playerId = null;
 let players = {};
 let projectiles = [];
-let localPlayer = {
-  x: 400, y: 300, angle: 0, name: 'Chèvre', color: '#ff9966', lives: 3
-};
+let explosions = [];
+let localPlayer = { x:0, y:0, angle:0, name:'Chèvre', color:'#ff9966', lives:3 };
 let keys = {};
 let controlMode = 'wasd';
 
-// ---- Connexion Socket.IO ----
-socket = io('https://goatbattleroyal-simulator-production.up.railway.app');
+// ---- Three.js ----
+let scene, camera, renderer;
+let playerMeshes = {};
+let projectileMeshes = [];
+let localMesh;
 
-socket.on('connect', () => {
-  console.log('Connecté au serveur, id:', socket.id);
-  playerId = socket.id;
-});
+// ---- init Three.js ----
+function initThree() {
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x88ccee);
 
-// ---- Écoute des événements serveur ----
-socket.on('room_update', (room) => {
+  camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+  camera.position.set(0, 15, 25);
+
+  renderer = new THREE.WebGLRenderer({ antialias:true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  document.body.appendChild(renderer.domElement);
+
+  const light = new THREE.DirectionalLight(0xffffff,1);
+  light.position.set(10,20,10);
+  scene.add(light);
+  scene.add(new THREE.AmbientLight(0x888888));
+
+  const ground = new THREE.Mesh(
+    new THREE.PlaneGeometry(200,200),
+    new THREE.MeshStandardMaterial({ color:0x228822 })
+  );
+  ground.rotation.x = -Math.PI/2;
+  scene.add(ground);
+
+  const geometry = new THREE.BoxGeometry(2,2,2);
+  const material = new THREE.MeshStandardMaterial({ color: localPlayer.color });
+  localMesh = new THREE.Mesh(geometry, material);
+  scene.add(localMesh);
+}
+
+// ---- Socket.IO ----
+socket.on('connect', ()=>{ console.log('Connecté', socket.id); playerId = socket.id; });
+
+socket.on('room_update', (room)=>{
   players = room.players;
-  // TODO : mettre à jour affichage des joueurs
+  updatePlayerMeshes();
+
+  // vérifier Top 1
+  const alive = Object.values(players).filter(p=>!p.isBot || p.lives>0);
+  if(alive.length === 1 && alive[0].name === localPlayer.name){
+    endScreen.style.display='block';
+    endText.innerText='TOP 1 ! Vous avez gagné 🏆';
+  }
 });
 
-socket.on('match_started', (data) => {
-  console.log('La partie commence !', data);
-  menu.style.display = 'none';
-  // TODO : lancer le rendu 3D
+socket.on('match_started', ()=>{ menu.style.display='none'; startGame(); });
+
+socket.on('you_died', ()=>{
+  endScreen.style.display='block';
+  endText.innerText='Vous êtes mort ! Retour au menu.';
 });
 
-socket.on('you_died', () => {
-  console.log('Vous êtes mort !');
-  endScreen.style.display = 'block';
-  endText.innerText = 'Vous êtes mort ! Retour au menu.';
-});
-
-// ---- Boutons menu ----
-startBtn.onclick = () => {
+// ---- Menu ----
+startBtn.onclick = ()=>{
   const name = pseudoInput.value.trim() || 'Chèvre';
   const color = colorInput.value || '#ff9966';
   controlMode = controlsSelect.value || 'wasd';
-
   localPlayer.name = name;
   localPlayer.color = color;
 
-  // Créer une salle
-  socket.emit('create_room', { name, color }, (res) => {
-    if (res.ok) {
-      roomId = res.roomId;
-      console.log('Salle créée ! Room ID :', roomId);
-      menu.style.display = 'none';
-      startGame();
-    } else {
-      console.log('Erreur création salle :', res.error);
-    }
+  socket.emit('create_room',{ name, color }, (res)=>{
+    if(res.ok){ roomId=res.roomId; menu.style.display='none'; initThree(); }
   });
-});
-
-backToMenu.onclick = () => {
-  endScreen.style.display = 'none';
-  menu.style.display = 'block';
-  // Reset joueur
-  localPlayer.lives = 3;
 };
 
-// ---- Gestion touches ----
-document.addEventListener('keydown', (e) => { keys[e.key.toLowerCase()] = true; });
-document.addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
+document.addEventListener('keydown', e=>keys[e.key.toLowerCase()]=true);
+document.addEventListener('keyup', e=>keys[e.key.toLowerCase()]=false);
 
-// ---- Fonction principale du jeu ----
+// ---- boucle jeu ----
 function startGame() {
-  // Exemple minimal : mettre à jour la position et envoyer au serveur
   function gameLoop() {
     handleInput();
     sendPlayerState();
-    render();
+    updateProjectiles();
+    updateExplosions();
+    updateCamera();
+    renderer.render(scene,camera);
     requestAnimationFrame(gameLoop);
   }
   gameLoop();
 }
 
-// ---- Déplacement joueur ----
+// ---- mouvement joueur ----
 function handleInput() {
-  const speed = keys['r'] ? 4 : 2; // R pour sprint
-  const jump = keys[' ']; // SPACE pour sauter
-  let forward = 0, turn = 0;
+  const speed = keys['r']?0.3:0.15;
+  let forward=0, turn=0;
 
-  if (controlMode === 'wasd') {
-    forward = (keys['w'] ? 1 : 0) - (keys['s'] ? 1 : 0);
-    turn = (keys['d'] ? 1 : 0) - (keys['a'] ? 1 : 0);
-  } else {
-    forward = (keys['z'] ? 1 : 0) - (keys['s'] ? 1 : 0);
-    turn = (keys['q'] ? 1 : 0) - (keys['d'] ? 1 : 0);
-  }
+  if(controlMode==='wasd'){ forward=(keys['w']?1:0)-(keys['s']?1:0); turn=(keys['d']?1:0)-(keys['a']?1:0); }
+  else { forward=(keys['z']?1:0)-(keys['s']?1:0); turn=(keys['d']?1:0)-(keys['q']?1:0); }
 
-  localPlayer.angle += turn * 0.05;
-  localPlayer.x += Math.cos(localPlayer.angle) * forward * speed;
-  localPlayer.y += Math.sin(localPlayer.angle) * forward * speed;
+  localPlayer.angle += turn*0.05;
+  localPlayer.x += Math.cos(localPlayer.angle)*forward*speed;
+  localPlayer.y += Math.sin(localPlayer.angle)*forward*speed;
 
-  if (keys['f']) { // tirer
-    socket.emit('fire', { x: localPlayer.x, y: localPlayer.y });
+  localMesh.position.set(localPlayer.x,1,localPlayer.y);
+  localMesh.rotation.y = -localPlayer.angle;
+
+  if(keys['f']){
+    socket.emit('fire',{x:localPlayer.x, y:localPlayer.y});
+    addProjectile(localPlayer.x, localPlayer.y, localPlayer.angle);
   }
 }
 
-// ---- Envoyer état joueur ----
-function sendPlayerState() {
-  socket.emit('player_state', {
-    x: localPlayer.x,
-    y: localPlayer.y,
-    angle: localPlayer.angle,
-    name: localPlayer.name,
-    color: localPlayer.color
+// ---- envoyer état ----
+function sendPlayerState(){
+  socket.emit('player_state',{
+    x:localPlayer.x, y:localPlayer.y, angle:localPlayer.angle, name:localPlayer.name, color:localPlayer.color
   });
 }
 
-// ---- Rendu minimal ----
-function render() {
-  ctx3d.width = canvas.clientWidth;
-  ctx3d.height = canvas.clientHeight;
-  const ctx = ctx3d.getContext('2d');
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  // Dessiner tous les joueurs
-  for (const id in players) {
+// ---- joueurs ----
+function updatePlayerMeshes(){
+  for(const id in players){
+    if(id===playerId) continue;
+    if(!playerMeshes[id]){
+      const g = new THREE.BoxGeometry(2,2,2);
+      const m = new THREE.MeshStandardMaterial({ color:players[id].color||0xff0000 });
+      const mesh = new THREE.Mesh(g,m);
+      scene.add(mesh);
+      playerMeshes[id]=mesh;
+    }
     const p = players[id];
-    ctx.fillStyle = p.color || '#ffffff';
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, 16, 0, Math.PI*2);
-    ctx.fill();
-
-    // pseudo
-    ctx.fillStyle = '#000';
-    ctx.font = '12px Arial';
-    ctx.fillText(p.name, p.x - 16, p.y - 20);
+    playerMeshes[id].position.set(p.x,1,p.y);
+    playerMeshes[id].rotation.y = -p.angle;
   }
+}
 
-  // Dessiner projectiles
-  projectiles.forEach(proj => {
-    ctx.fillStyle = '#ff0';
-    ctx.beginPath();
-    ctx.arc(proj.x, proj.y, 5, 0, Math.PI*2);
-    ctx.fill();
-  });
+// ---- projectiles ----
+function addProjectile(x,y,angle){
+  const g = new THREE.BoxGeometry(0.5,0.5,0.5); // cube projectile
+  const m = new THREE.MeshStandardMaterial({ color:0xffff00 });
+  const mesh = new THREE.Mesh(g,m);
+  mesh.userData = { x:x, y:y, vx:Math.cos(angle)*0.5, vy:Math.sin(angle)*0.5, life:50 };
+  mesh.position.set(x,1,y);
+  scene.add(mesh);
+  projectileMeshes.push(mesh);
+}
+
+function updateProjectiles(){
+  for(let i=projectileMeshes.length-1;i>=0;i--){
+    const p = projectileMeshes[i];
+    p.userData.x += p.userData.vx;
+    p.userData.y += p.userData.vy;
+    p.position.set(p.userData.x,1,p.userData.y);
+    p.userData.life--;
+
+    if(p.userData.life<=0){
+      addExplosion(p.userData.x, p.userData.y);
+      scene.remove(p);
+      projectileMeshes.splice(i,1);
+    }
+  }
+}
+
+// ---- explosions ----
+function addExplosion(x,y){
+  const particles = [];
+  const g = new THREE.BoxGeometry(0.3,0.3,0.3);
+  for(let i=0;i<10;i++){
+    const m = new THREE.Mesh(g,new THREE.MeshStandardMaterial({ color:0xff5500 }));
+    m.position.set(x,1,y);
+    m.userData = { vx:(Math.random()-0.5)*0.5, vy:(Math.random()-0.5)*0.5, life:20+Math.random()*20 };
+    scene.add(m);
+    particles.push(m);
+  }
+  explosions.push(particles);
+}
+
+function updateExplosions(){
+  for(let i=explosions.length-1;i>=0;i--){
+    const arr = explosions[i];
+    for(let j=arr.length-1;j>=0;j--){
+      const p = arr[j];
+      p.position.x += p.userData.vx;
+      p.position.z += p.userData.vy;
+      p.userData.life--;
+      if(p.userData.life<=0){ scene.remove(p); arr.splice(j,1); }
+    }
+    if(arr.length===0) explosions.splice(i,1);
+  }
+}
+
+// ---- caméra ----
+function updateCamera(){
+  camera.position.x = localPlayer.x - Math.sin(localPlayer.angle)*10;
+  camera.position.z = localPlayer.y - Math.cos(localPlayer.angle)*10;
+  camera.position.y = 8;
+  camera.lookAt(localPlayer.x,1,localPlayer.y);
 }
