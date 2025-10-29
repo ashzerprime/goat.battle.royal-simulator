@@ -112,4 +112,7 @@ io.on('connection', (socket) => {
 
 app.get('/', (req, res) => res.send('Goat Battle WebSocket server running.'));
 
+server.listen(PORT, () => {
+  console.log(`✅ Serveur en ligne sur le port ${PORT}`);
+});
 
