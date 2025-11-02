@@ -1,165 +1,188 @@
-// main.js - Goat Battle Royale 3D
+// main.js
 
-// --- Socket.IO ---
-const socket = io('https://goatbattleroyal-simulator-production.up.railway.app', { transports: ['websocket'] });
+const socket = io({ transports: ['websocket'] });
 
-// --- UI ---
+// UI
 const menu = document.getElementById('menu');
 const menu2 = document.getElementById('menu2');
 const startBtn = document.getElementById('startBtn');
-const publicBtn = document.getElementById('publicBtn');
-const privateBtn = document.getElementById('privateBtn');
+const backMenu1Btn = document.getElementById('backMenu1Btn');
+const launchBtn = document.getElementById('launchBtn');
 const inviteBtn = document.getElementById('inviteBtn');
-const inviteInput = document.getElementById('inviteInput');
 const pseudoInput = document.getElementById('pseudo');
-const controlsSelect = document.getElementById('controls');
 const colorInput = document.getElementById('color');
+const controlsSelect = document.getElementById('controls');
+const iaCountDiv = document.getElementById('iaCountDiv');
+const iaCount = document.getElementById('iaCount');
+const modeRadios = document.getElementsByName('mode');
+const invitePseudo = document.getElementById('invitePseudo');
+const playerList = document.getElementById('playerList');
 const endScreen = document.getElementById('endScreen');
 const endText = document.getElementById('endText');
 const backToMenu = document.getElementById('backToMenu');
-const countNum = document.getElementById('countNum');
-const canvas = document.getElementById('canvas3d');
-const ctx = canvas.getContext('2d');
-const speedEl = document.getElementById('speed');
+const chatInput = document.getElementById('chatInput');
+const chatMessages = document.getElementById('chatMessages');
+const speedDisplay = document.getElementById('speed');
 
-// --- Variables ---
+let roomId = null;
+let playerId = null;
+let localPlayer = { x:0,y:0,z:0, angle:0, name:'', color:'#ff9966', lives:3 };
 let players = {};
 let projectiles = [];
-let explosions = [];
-let localPlayer = { x:400, y:300, angle:0, name:'Chèvre', color:'#ff9966', lives:3, stamina:100, speed:0 };
-let controlMode = 'wasd';
+let iaPlayers = [];
 let keys = {};
-let roomId = null;
-let gameStarted = false;
+let controlMode = 'wasd';
+let scene, camera, renderer, loader;
+let goatModels = {};
 
-// --- Input clavier ---
-document.addEventListener('keydown', e=>keys[e.key.toLowerCase()]=true);
-document.addEventListener('keyup', e=>keys[e.key.toLowerCase()]=false);
-
-// --- Connexion serveur ---
-socket.on('connect', ()=>console.log('Connecté au serveur'));
-socket.on('room_update', room=>{ players = room.players; });
-socket.on('you_died', ()=>showEnd('GAME OVER'));
-socket.on('match_ended', winner=>showEnd(`TOP 1 : ${winner}`));
-
-// --- Boutons ---
+// --- Menus ---
 startBtn.onclick = () => {
-  localPlayer.name = pseudoInput.value.trim() || 'Chèvre';
-  localPlayer.color = colorInput.value || '#ff9966';
-  controlMode = controlsSelect.value;
-  menu.style.display = 'none';
-  menu2.style.display = 'flex';
+    localPlayer.name = pseudoInput.value.trim() || 'Chèvre';
+    localPlayer.color = colorInput.value || '#ff9966';
+    controlMode = controlsSelect.value;
+    socket.emit('create_room', { name: localPlayer.name, color: localPlayer.color }, res => {
+        if(res.ok){
+            roomId = res.roomId;
+            playerId = socket.id;
+            menu.style.display='none';
+            menu2.style.display='flex';
+            updateIAOptions();
+        }
+    });
 };
 
-publicBtn.onclick = ()=>startGame('public');
-privateBtn.onclick = ()=>startGame('private');
-
-inviteBtn.onclick = ()=>{
-  const friend = inviteInput.value.trim();
-  if(!friend){ alert("Pseudo vide"); return; }
-  socket.emit('invite_friend', { friend, roomId });
-  alert(`Invitation envoyée à ${friend}`);
-};
-
-backToMenu.onclick = ()=>{
-  endScreen.style.display='none';
-  menu.style.display='flex';
-  gameStarted=false;
-};
-
-// --- Lancer partie ---
-function startGame(type){
-  roomId = 'room-'+Math.random().toString(36).substr(2,6);
-  socket.emit('create_room', { name: localPlayer.name, color: localPlayer.color }, res=>{
-    if(res.ok){
-      menu2.style.display='none';
-      gameStarted=true;
-      countdownStart(5);
-    } else alert('Erreur: '+res.error);
-  });
+function updateIAOptions(){
+    if(getMode()=='private') iaCountDiv.style.display='block';
+    else iaCountDivDiv.style.display='none';
 }
 
-// --- Countdown ---
-function countdownStart(sec){
-  let t = sec;
-  countNum.innerText = t;
-  const timer = setInterval(()=>{
-    t--;
-    countNum.innerText=t;
-    if(t<=0){
-      clearInterval(timer);
-      gameLoop();
+function getMode(){
+    for(const r of modeRadios) if(r.checked) return r.value;
+    return 'public';
+}
+
+backMenu1Btn.onclick=()=>{
+    menu.style.display='flex';
+    menu2.style.display='none';
+}
+
+launchBtn.onclick=()=>{
+    socket.emit('start_match',{mode:getMode(), ia:parseInt(iaCount.value)});
+    menu2.style.display='none';
+    init3D();
+}
+
+inviteBtn.onclick=()=>{
+    const target = invitePseudo.value.trim();
+    if(target) socket.emit('invite',{to:target});
+};
+
+backToMenu.onclick=()=>{
+    endScreen.style.display='none';
+    menu.style.display='flex';
+};
+
+// --- Chat ---
+chatInput.addEventListener('keydown', e=>{
+    if(e.key==='Enter' && chatInput.value.trim()!=''){
+        socket.emit('chat_message',{msg:chatInput.value});
+        chatInput.value='';
     }
-  },1000);
-}
+});
 
-// --- Mouvement ---
-function handleInput(){
-  let fwd=0, turn=0;
-  if(controlMode==='wasd'){
-    fwd=(keys['w']?1:0)-(keys['s']?1:0);
-    turn=(keys['d']?1:0)-(keys['a']?1:0);
-  }else if(controlMode==='zqsd'){
-    fwd=(keys['z']?1:0)-(keys['s']?1:0);
-    turn=(keys['d']?1:0)-(keys['q']?1:0);
-  }else if(controlMode==='arrows'){
-    fwd=(keys['arrowup']?1:0)-(keys['arrowdown']?1:0);
-    turn=(keys['arrowright']?1:0)-(keys['arrowleft']?1:0);
-  }
+socket.on('chat_message',data=>{
+    const div = document.createElement('div');
+    div.textContent=`${data.from}: ${data.msg}`;
+    chatMessages.appendChild(div);
+    chatMessages.scrollTop=chatMessages.scrollHeight;
+});
 
-  let speed = keys['f'] && localPlayer.stamina>0 ? 5 : 2;
-  if(keys['f'] && localPlayer.stamina>0) localPlayer.stamina=Math.max(0,localPlayer.stamina-0.5);
-  else if(!keys['f']) localPlayer.stamina=Math.min(100,localPlayer.stamina+0.2);
+// --- Socket.io updates ---
+socket.on('connect',()=>console.log('Connecté au serveur'));
+socket.on('room_update',data=>{
+    players = data.players||{};
+    iaPlayers = data.ia||[];
+    playerList.textContent=Object.values(players).map(p=>p.name).join(', ');
+});
+socket.on('you_died',()=>showEnd('GAME OVER'));
+socket.on('match_ended',winner=>showEnd(`${winner} est le Top 1 !`));
 
-  localPlayer.angle += turn*0.05;
-  localPlayer.x += Math.cos(localPlayer.angle)*fwd*speed;
-  localPlayer.y += Math.sin(localPlayer.angle)*fwd*speed;
-  localPlayer.speed = speed*30;
-
-  // Tir
-  if(keys['g']) socket.emit('fire',{ x:localPlayer.x, y:localPlayer.y });
-
-  // Envoi état au serveur
-  socket.emit('player_state', localPlayer);
-}
-
-// --- Game loop ---
-function gameLoop(){
-  if(!gameStarted) return;
-  handleInput();
-  render();
-  requestAnimationFrame(gameLoop);
-}
-
-// --- Render 3D minimal ---
-function render(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  // Enclos
-  ctx.strokeStyle='#654321';
-  ctx.lineWidth=10;
-  ctx.strokeRect(40,40,720,520);
-
-  // Joueurs
-  for(const id in players){
-    const p = players[id];
-    ctx.save();
-    ctx.translate(p.x,p.y);
-    ctx.rotate(p.angle);
-    ctx.fillStyle=p.color;
-    ctx.fillRect(-15,-15,30,30);
-    ctx.restore();
-    ctx.fillStyle='black';
-    ctx.font='14px Arial';
-    ctx.fillText(p.name,p.x-20,p.y-25);
-  }
-
-  // Vitesse
-  speedEl.innerText='Vitesse: '+Math.round(localPlayer.speed)+' km/h';
-}
-
-// --- Fin ---
+// --- End screen ---
 function showEnd(text){
-  endText.innerText=text;
-  endScreen.style.display='flex';
-  gameStarted=false;
+    endText.textContent=text;
+    endScreen.style.display='flex';
+}
+
+// --- 3D setup ---
+function init3D(){
+    scene=new THREE.Scene();
+    camera=new THREE.PerspectiveCamera(75,window.innerWidth/window.innerHeight,0.1,1000);
+    camera.position.set(0,20,30);
+    renderer=new THREE.WebGLRenderer({antialias:true});
+    renderer.setSize(window.innerWidth,window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    loader = new THREE.GLTFLoader();
+    // simple cube pour les autres joueurs pour prototype
+    for(const id in players){
+        const geometry = new THREE.BoxGeometry(1,1,1);
+        const material = new THREE.MeshStandardMaterial({color:players[id].color});
+        const mesh = new THREE.Mesh(geometry,material);
+        goatModels[id]=mesh;
+        scene.add(mesh);
+    }
+
+    const light = new THREE.DirectionalLight(0xffffff,1);
+    light.position.set(10,20,10);
+    scene.add(light);
+
+    animate();
+}
+
+// --- Animate loop ---
+function animate(){
+    requestAnimationFrame(animate);
+    handleInput3D();
+    updateModels();
+    renderer.render(scene,camera);
+}
+
+// --- Input 3D ---
+document.addEventListener('keydown',e=>keys[e.key.toLowerCase()]=true);
+document.addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
+
+function handleInput3D(){
+    let fwd=0, strafe=0;
+    if(controlMode=='wasd'){
+        fwd=(keys['w']?1:0)-(keys['s']?1:0);
+        strafe=(keys['d']?1:0)-(keys['a']?1:0);
+    } else if(controlMode=='zqsd'){
+        fwd=(keys['z']?1:0)-(keys['s']?1:0);
+        strafe=(keys['d']?1:0)-(keys['q']?1:0);
+    } else if(controlMode=='arrows'){
+        fwd=(keys['arrowup']?1:0)-(keys['arrowdown']?1:0);
+        strafe=(keys['arrowright']?1:0)-(keys['arrowleft']?1:0);
+    }
+
+    const speed = keys['f']?0.2:0.1;
+    localPlayer.x+=fwd*speed;
+    localPlayer.z+=strafe*speed;
+    speedDisplay.textContent=`Vitesse: ${Math.round(speed*1500)} km/h`;
+
+    // update player position to server
+    socket.emit('player_state',localPlayer);
+}
+
+// --- Update 3D player models ---
+function updateModels(){
+    for(const id in players){
+        if(!goatModels[id]){
+            const geometry = new THREE.BoxGeometry(1,1,1);
+            const material = new THREE.MeshStandardMaterial({color:players[id].color});
+            const mesh = new THREE.Mesh(geometry,material);
+            goatModels[id]=mesh;
+            scene.add(mesh);
+        }
+        goatModels[id].position.set(players[id].x,0,players[id].z);
+    }
 }
