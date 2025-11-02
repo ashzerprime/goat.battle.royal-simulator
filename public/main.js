@@ -1,154 +1,150 @@
-// --- Connexion Socket.IO ---
-const socket = io({ transports: ['websocket'] });
+// --- Initialisation Socket.IO ---
+const socket = io({ transports:['websocket'] });
 
 // --- UI ---
-const menu1 = document.getElementById('menu');
+const menu = document.getElementById('menu');
 const menu2 = document.getElementById('menu2');
 const startBtn = document.getElementById('startBtn');
-const pseudoInput = document.getElementById('pseudo');
-const colorInput = document.getElementById('color');
-const controlsSelect = document.getElementById('controls');
-
-const inviteInput = document.getElementById('invitePseudo');
-const inviteBtn = document.getElementById('inviteBtn');
+const publicBtn = document.getElementById('publicBtn');
+const privateBtn = document.getElementById('privateBtn');
 const launchBtn = document.getElementById('launchBtn');
-const backMenu1Btn = document.getElementById('backMenu1Btn');
-const playerListSpan = document.getElementById('playerList');
-const iaCountInput = document.getElementById('iaCount');
-
+const inviteBtn = document.getElementById('inviteBtn');
+const inviteInput = document.getElementById('inviteInput');
+const pseudoInput = document.getElementById('pseudo');
+const controlsSelect = document.getElementById('controls');
+const colorInput = document.getElementById('color');
+const backToMenu = document.getElementById('backToMenu');
+const hudKills = document.getElementById('kills');
+const hudTop = document.getElementById('top');
+const hudSpeed = document.getElementById('speed');
+const hudStamina = document.getElementById('stamina');
+const playersList = document.getElementById('playersList');
+const chatDiv = document.getElementById('chat');
+const chatInput = document.getElementById('chatInput');
 const endScreen = document.getElementById('endScreen');
 const endText = document.getElementById('endText');
-const backToMenu = document.getElementById('backToMenu');
 
-const chatMessages = document.getElementById('chatMessages');
-const chatInput = document.getElementById('chatInput');
-const speedDiv = document.getElementById('speed');
-
-// --- Variables ---
 let scene, camera, renderer;
-let localPlayer = { name:'Chèvre', color:'#ff9966', x:0, y:0, z:0, rotY:0, lives:3, stamina:100, speed:0 };
-let players = {}; // autres joueurs + self
+let localPlayer = { x:0, y:0, z:0, angle:0, name:'Chèvre', color:'#ff9966', lives:3, kills:0 };
+let players = {};
 let projectiles = [];
 let keys = {};
 let controlMode = 'wasd';
 let roomId = null;
-let host = false;
-let countdown = 5;
-let mode = 'public';
-let iaCount = 3;
+let stamina = 100;
 
-// --- Three.js init ---
-function init3D() {
-    scene = new THREE.Scene();
-    camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-    renderer = new THREE.WebGLRenderer({ antialias:true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    document.body.appendChild(renderer.domElement);
-
-    // lumière
-    const light = new THREE.DirectionalLight(0xffffff,1);
-    light.position.set(0,50,50);
-    scene.add(light);
-
-    // sol
-    const geometry = new THREE.PlaneGeometry(1000,1000);
-    const material = new THREE.MeshStandardMaterial({ color:0x228822 });
-    const floor = new THREE.Mesh(geometry, material);
-    floor.rotation.x = -Math.PI/2;
-    scene.add(floor);
-
-    // Joueur local (cube temporaire)
-    const geometryCube = new THREE.BoxGeometry(5,5,5);
-    const materialCube = new THREE.MeshStandardMaterial({ color:localPlayer.color });
-    localPlayer.mesh = new THREE.Mesh(geometryCube, materialCube);
-    localPlayer.mesh.position.set(localPlayer.x,2.5,localPlayer.z);
-    scene.add(localPlayer.mesh);
-
-    camera.position.set(localPlayer.x,20,localPlayer.z+20);
-    camera.lookAt(localPlayer.mesh.position);
+// --- Three.js 3D ---
+function initThree() {
+  scene = new THREE.Scene();
+  camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 2000);
+  camera.position.set(0,50,100);
+  renderer = new THREE.WebGLRenderer({canvas:document.getElementById('canvas3d')});
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  // Lumière
+  const light = new THREE.DirectionalLight(0xffffff,1);
+  light.position.set(100,200,100);
+  scene.add(light);
+  // Sol
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(2000,2000), new THREE.MeshPhongMaterial({color:0x228B22}));
+  ground.rotation.x = -Math.PI/2;
+  scene.add(ground);
 }
 
-// --- Input ---
-document.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
-document.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+// --- Contrôles clavier ---
+document.addEventListener('keydown', e => keys[e.key.toLowerCase()]=true);
+document.addEventListener('keyup', e => keys[e.key.toLowerCase()]=false);
 
-// --- Menu 1 ---
+// --- Menu principal ---
 startBtn.onclick = () => {
-    localPlayer.name = pseudoInput.value.trim() || 'Chèvre';
-    localPlayer.color = colorInput.value || '#ff9966';
-    controlMode = controlsSelect.value;
-    menu1.style.display='none';
-    menu2.style.display='flex';
+  localPlayer.name = pseudoInput.value || 'Chèvre';
+  localPlayer.color = colorInput.value || '#ff9966';
+  controlMode = controlsSelect.value || 'wasd';
+  menu.style.display='none';
+  menu2.style.display='flex';
 };
 
-// --- Menu 2 ---
-backMenu1Btn.onclick = ()=> { menu2.style.display='none'; menu1.style.display='flex'; }
-launchBtn.onclick = () => {
-    iaCount = parseInt(iaCountInput.value);
-    mode = document.querySelector('input[name="mode"]:checked').value;
-    socket.emit('launch_game',{ roomId, mode, iaCount });
+// --- Lobby ---
+let mode = 'public';
+publicBtn.onclick = ()=>mode='public';
+privateBtn.onclick = ()=>mode='private';
+launchBtn.onclick = ()=>{
+  socket.emit('launch_game',{roomId,mode});
+  menu2.style.display='none';
+  initThree();
+  animate();
 };
-
-// --- Invitations ---
 inviteBtn.onclick = ()=>{
-    const target = inviteInput.value.trim();
-    if(target) socket.emit('invite_player', { roomId, target });
+  const target = inviteInput.value.trim();
+  if(target) socket.emit('invite',{target,roomId});
 };
 
 // --- Chat ---
-chatInput.addEventListener('keydown', e=>{
-    if(e.key==='Enter'){
-        const msg = chatInput.value.trim();
-        if(msg){
-            socket.emit('chat_message', msg);
-            chatInput.value='';
-        }
-    }
+chatInput.addEventListener('keydown',e=>{
+  if(e.key==='Enter'){
+    const msg = chatInput.value.trim();
+    if(msg){ socket.emit('chat',msg); chatInput.value=''; }
+  }
 });
-socket.on('chat_message', data=>{
-    const div = document.createElement('div');
-    div.textContent = data;
-    chatMessages.appendChild(div);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
+socket.on('chat',data=>{
+  const p = document.createElement('div');
+  p.textContent = `${data.name}: ${data.msg}`;
+  chatDiv.appendChild(p);
+  chatDiv.scrollTop = chatDiv.scrollHeight;
 });
 
-// --- Socket events ---
-socket.on('connect', ()=> console.log('Connecté au serveur'));
-socket.on('room_update', data => {
-    players = data.players;
-    playerListSpan.textContent = Object.values(players).map(p=>p.name).join(', ');
+// --- Joueur ---
+socket.on('room_update',room=>{
+  players=room.players;
+  playersList.innerHTML = '';
+  for(const id in players) playersList.innerHTML += `<div>${players[id].name}</div>`;
 });
-socket.on('game_started', ()=>{ menu2.style.display='none'; init3D(); animate(); });
 
-// --- Mouvements & logique ---
-function updatePlayer(){
-    let fwd=0, turn=0;
-    if(controlMode==='wasd'){ fwd=(keys['w']?1:0)-(keys['s']?1:0); turn=(keys['d']?1:0)-(keys['a']?1:0); }
-    else if(controlMode==='zqsd'){ fwd=(keys['z']?1:0)-(keys['s']?1:0); turn=(keys['d']?1:0)-(keys['q']?1:0); }
-    else{ fwd=(keys['ArrowUp']?1:0)-(keys['ArrowDown']?1:0); turn=(keys['ArrowRight']?1:0)-(keys['ArrowLeft']?1:0); }
-
-    const sprint = keys['f'] && localPlayer.stamina>0;
-    const speed = sprint?0.8:0.4;
-    localPlayer.rotY += turn*0.05;
-    localPlayer.x += Math.sin(localPlayer.rotY)*fwd*speed;
-    localPlayer.z += Math.cos(localPlayer.rotY)*fwd*speed;
-
-    if(sprint) localPlayer.stamina-=0.5;
-    else if(localPlayer.stamina<100) localPlayer.stamina+=0.3;
-
-    localPlayer.speed = fwd*speed*100; // km/h pour affichage
-    localPlayer.mesh.position.set(localPlayer.x,2.5,localPlayer.z);
-    localPlayer.mesh.rotation.y = localPlayer.rotY;
-
-    socket.emit('player_state', localPlayer);
-}
-
-// --- Animation 3D ---
+// --- Boucle de jeu ---
 function animate(){
-    requestAnimationFrame(animate);
-    updatePlayer();
-    renderer.render(scene,camera);
-    camera.position.set(localPlayer.x,20,localPlayer.z+20);
-    camera.lookAt(localPlayer.mesh.position);
-    speedDiv.textContent = `Vitesse: ${Math.round(localPlayer.speed*3)} km/h`;
+  requestAnimationFrame(animate);
+  updatePlayer();
+  renderer.render(scene,camera);
+  updateHUD();
 }
+
+// --- Mise à jour HUD ---
+function updateHUD(){
+  hudKills.textContent = localPlayer.kills;
+  hudTop.textContent = Object.keys(players).length;
+  hudStamina.textContent = Math.floor(stamina);
+}
+
+// --- Déplacement joueur ---
+function updatePlayer(){
+  let speed = 0.5 + (keys['f'] && stamina>0?1:0);
+  if(keys['f'] && stamina>0) stamina-=0.5;
+  else if(stamina<100) stamina+=0.2;
+
+  // WASD / Flèches
+  let forward=0,right=0;
+  if(controlMode==='wasd'){
+    forward=(keys['w']?1:0)-(keys['s']?1:0);
+    right=(keys['d']?1:0)-(keys['a']?1:0);
+  }else{
+    forward=(keys['arrowup']?1:0)-(keys['arrowdown']?1:0);
+    right=(keys['arrowright']?1:0)-(keys['arrowleft']?1:0);
+  }
+
+  localPlayer.x+=forward*speed;
+  localPlayer.z+=right*speed;
+  camera.position.set(localPlayer.x+50,50,localPlayer.z+50);
+  camera.lookAt(localPlayer.x,0,localPlayer.z);
+
+  // Tir
+  if(keys['g']) socket.emit('fire',{x:localPlayer.x,z:localPlayer.z,angle:localPlayer.angle});
+
+  socket.emit('player_state',localPlayer);
+}
+
+// --- Mort ---
+socket.on('you_died',()=>{endScreen.style.display='flex'; endText.textContent='GAME OVER';});
+socket.on('match_ended',winner=>{endScreen.style.display='flex'; endText.textContent=`TOP 1 : ${winner}`;});
+backToMenu.onclick = ()=>{endScreen.style.display='none'; menu.style.display='flex';};
+
+// --- Réception projectiles ---
+socket.on('projectile',p=>{projectiles.push(p);});
