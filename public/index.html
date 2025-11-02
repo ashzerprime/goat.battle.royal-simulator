@@ -1,50 +1,110 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
-<title>Goat Battle Royale 3D</title>
-<style>
-  body { margin:0; overflow:hidden; font-family:Arial,sans-serif; background:#88ccee; }
-  #menu, #endScreen {
-    position:absolute; top:0; left:0; width:100%; height:100%;
-    display:flex; flex-direction:column; justify-content:center; align-items:center;
-    background:rgba(0,0,0,0.7); color:#fff; z-index:10;
-  }
-  #menu input, #menu select, #menu button {
-    margin:5px; padding:5px 10px; font-size:16px;
-  }
-  #canvas3d { display:block; width:100%; height:100%; }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🐐 Goat Battle Royale</title>
+  <style>
+    body {
+      margin: 0;
+      background: linear-gradient(135deg, #88cc88, #ccffcc);
+      overflow: hidden;
+      font-family: 'Comic Sans MS', sans-serif;
+      color: #222;
+    }
+
+    #menu {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.85);
+      z-index: 10;
+    }
+
+    #menu input, #menu select, #menu button {
+      margin: 8px;
+      padding: 10px;
+      font-size: 18px;
+      border-radius: 8px;
+      border: none;
+      outline: none;
+    }
+
+    #startBtn, #inviteBtn {
+      background: #4caf50;
+      color: white;
+      cursor: pointer;
+    }
+
+    #inviteBtn {
+      background: #2196f3;
+    }
+
+    #livesDisplay {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      font-size: 20px;
+      background: rgba(255,255,255,0.7);
+      padding: 6px 12px;
+      border-radius: 8px;
+    }
+
+    #endScreen {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.8);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      font-size: 32px;
+      z-index: 20;
+      display: none;
+    }
+
+    #backToMenu {
+      margin-top: 20px;
+      background: #ff9800;
+      color: white;
+      padding: 10px 20px;
+      font-size: 20px;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+
+    canvas {
+      display: block;
+    }
+  </style>
 </head>
 <body>
+  <div id="menu">
+    <h1>🐐 Goat Battle Royale</h1>
+    <input id="pseudo" placeholder="Ton pseudo" />
+    <input id="color" type="color" value="#ff9966" />
+    <select id="controls">
+      <option value="wasd">Contrôles WASD</option>
+      <option value="zqsd">Contrôles ZQSD</option>
+    </select>
+    <button id="startBtn">JOUER</button>
+    <button id="inviteBtn">INVITER UN AMI</button>
+  </div>
 
-<!-- Menu -->
-<div id="menu">
-  <h1>Goat Battle Royale 3D</h1>
-  <input id="pseudo" placeholder="Pseudo">
-  <input id="color" type="color" value="#ff9966">
-  <select id="controls">
-    <option value="wasd">WASD</option>
-    <option value="zqsd">ZQSD</option>
-  </select>
-  <button id="startBtn">Jouer</button>
-</div>
+  <div id="livesDisplay">❤️ Vies: <span id="lives">3</span></div>
 
-<!-- Écran fin -->
-<div id="endScreen" style="display:none;">
-  <h2 id="endText"></h2>
-  <button id="backToMenu">Retour au menu</button>
-</div>
+  <canvas id="canvas3d" width="800" height="600"></canvas>
 
-<!-- Canvas Three.js -->
-<canvas id="canvas3d"></canvas>
+  <div id="endScreen">
+    <div id="endText"></div>
+    <button id="backToMenu">Retour au menu</button>
+  </div>
 
-<!-- Three.js -->
-<script src="https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.min.js"></script>
-<!-- Socket.IO -->
-<script src="/socket.io/socket.io.js"></script>
-<!-- Ton main.js -->
-<script src="main.js"></script>
-
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script src="main.js"></script>
 </body>
 </html>
