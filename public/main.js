@@ -1,188 +1,154 @@
-// main.js
-
+// --- Connexion Socket.IO ---
 const socket = io({ transports: ['websocket'] });
 
-// UI
-const menu = document.getElementById('menu');
+// --- UI ---
+const menu1 = document.getElementById('menu');
 const menu2 = document.getElementById('menu2');
 const startBtn = document.getElementById('startBtn');
-const backMenu1Btn = document.getElementById('backMenu1Btn');
-const launchBtn = document.getElementById('launchBtn');
-const inviteBtn = document.getElementById('inviteBtn');
 const pseudoInput = document.getElementById('pseudo');
 const colorInput = document.getElementById('color');
 const controlsSelect = document.getElementById('controls');
-const iaCountDiv = document.getElementById('iaCountDiv');
-const iaCount = document.getElementById('iaCount');
-const modeRadios = document.getElementsByName('mode');
-const invitePseudo = document.getElementById('invitePseudo');
-const playerList = document.getElementById('playerList');
+
+const inviteInput = document.getElementById('invitePseudo');
+const inviteBtn = document.getElementById('inviteBtn');
+const launchBtn = document.getElementById('launchBtn');
+const backMenu1Btn = document.getElementById('backMenu1Btn');
+const playerListSpan = document.getElementById('playerList');
+const iaCountInput = document.getElementById('iaCount');
+
 const endScreen = document.getElementById('endScreen');
 const endText = document.getElementById('endText');
 const backToMenu = document.getElementById('backToMenu');
-const chatInput = document.getElementById('chatInput');
-const chatMessages = document.getElementById('chatMessages');
-const speedDisplay = document.getElementById('speed');
 
-let roomId = null;
-let playerId = null;
-let localPlayer = { x:0,y:0,z:0, angle:0, name:'', color:'#ff9966', lives:3 };
-let players = {};
+const chatMessages = document.getElementById('chatMessages');
+const chatInput = document.getElementById('chatInput');
+const speedDiv = document.getElementById('speed');
+
+// --- Variables ---
+let scene, camera, renderer;
+let localPlayer = { name:'Chèvre', color:'#ff9966', x:0, y:0, z:0, rotY:0, lives:3, stamina:100, speed:0 };
+let players = {}; // autres joueurs + self
 let projectiles = [];
-let iaPlayers = [];
 let keys = {};
 let controlMode = 'wasd';
-let scene, camera, renderer, loader;
-let goatModels = {};
+let roomId = null;
+let host = false;
+let countdown = 5;
+let mode = 'public';
+let iaCount = 3;
 
-// --- Menus ---
+// --- Three.js init ---
+function init3D() {
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+    renderer = new THREE.WebGLRenderer({ antialias:true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    // lumière
+    const light = new THREE.DirectionalLight(0xffffff,1);
+    light.position.set(0,50,50);
+    scene.add(light);
+
+    // sol
+    const geometry = new THREE.PlaneGeometry(1000,1000);
+    const material = new THREE.MeshStandardMaterial({ color:0x228822 });
+    const floor = new THREE.Mesh(geometry, material);
+    floor.rotation.x = -Math.PI/2;
+    scene.add(floor);
+
+    // Joueur local (cube temporaire)
+    const geometryCube = new THREE.BoxGeometry(5,5,5);
+    const materialCube = new THREE.MeshStandardMaterial({ color:localPlayer.color });
+    localPlayer.mesh = new THREE.Mesh(geometryCube, materialCube);
+    localPlayer.mesh.position.set(localPlayer.x,2.5,localPlayer.z);
+    scene.add(localPlayer.mesh);
+
+    camera.position.set(localPlayer.x,20,localPlayer.z+20);
+    camera.lookAt(localPlayer.mesh.position);
+}
+
+// --- Input ---
+document.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
+document.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+
+// --- Menu 1 ---
 startBtn.onclick = () => {
     localPlayer.name = pseudoInput.value.trim() || 'Chèvre';
     localPlayer.color = colorInput.value || '#ff9966';
     controlMode = controlsSelect.value;
-    socket.emit('create_room', { name: localPlayer.name, color: localPlayer.color }, res => {
-        if(res.ok){
-            roomId = res.roomId;
-            playerId = socket.id;
-            menu.style.display='none';
-            menu2.style.display='flex';
-            updateIAOptions();
-        }
-    });
+    menu1.style.display='none';
+    menu2.style.display='flex';
 };
 
-function updateIAOptions(){
-    if(getMode()=='private') iaCountDiv.style.display='block';
-    else iaCountDivDiv.style.display='none';
-}
-
-function getMode(){
-    for(const r of modeRadios) if(r.checked) return r.value;
-    return 'public';
-}
-
-backMenu1Btn.onclick=()=>{
-    menu.style.display='flex';
-    menu2.style.display='none';
-}
-
-launchBtn.onclick=()=>{
-    socket.emit('start_match',{mode:getMode(), ia:parseInt(iaCount.value)});
-    menu2.style.display='none';
-    init3D();
-}
-
-inviteBtn.onclick=()=>{
-    const target = invitePseudo.value.trim();
-    if(target) socket.emit('invite',{to:target});
+// --- Menu 2 ---
+backMenu1Btn.onclick = ()=> { menu2.style.display='none'; menu1.style.display='flex'; }
+launchBtn.onclick = () => {
+    iaCount = parseInt(iaCountInput.value);
+    mode = document.querySelector('input[name="mode"]:checked').value;
+    socket.emit('launch_game',{ roomId, mode, iaCount });
 };
 
-backToMenu.onclick=()=>{
-    endScreen.style.display='none';
-    menu.style.display='flex';
+// --- Invitations ---
+inviteBtn.onclick = ()=>{
+    const target = inviteInput.value.trim();
+    if(target) socket.emit('invite_player', { roomId, target });
 };
 
 // --- Chat ---
 chatInput.addEventListener('keydown', e=>{
-    if(e.key==='Enter' && chatInput.value.trim()!=''){
-        socket.emit('chat_message',{msg:chatInput.value});
-        chatInput.value='';
+    if(e.key==='Enter'){
+        const msg = chatInput.value.trim();
+        if(msg){
+            socket.emit('chat_message', msg);
+            chatInput.value='';
+        }
     }
 });
-
-socket.on('chat_message',data=>{
+socket.on('chat_message', data=>{
     const div = document.createElement('div');
-    div.textContent=`${data.from}: ${data.msg}`;
+    div.textContent = data;
     chatMessages.appendChild(div);
-    chatMessages.scrollTop=chatMessages.scrollHeight;
+    chatMessages.scrollTop = chatMessages.scrollHeight;
 });
 
-// --- Socket.io updates ---
-socket.on('connect',()=>console.log('Connecté au serveur'));
-socket.on('room_update',data=>{
-    players = data.players||{};
-    iaPlayers = data.ia||[];
-    playerList.textContent=Object.values(players).map(p=>p.name).join(', ');
+// --- Socket events ---
+socket.on('connect', ()=> console.log('Connecté au serveur'));
+socket.on('room_update', data => {
+    players = data.players;
+    playerListSpan.textContent = Object.values(players).map(p=>p.name).join(', ');
 });
-socket.on('you_died',()=>showEnd('GAME OVER'));
-socket.on('match_ended',winner=>showEnd(`${winner} est le Top 1 !`));
+socket.on('game_started', ()=>{ menu2.style.display='none'; init3D(); animate(); });
 
-// --- End screen ---
-function showEnd(text){
-    endText.textContent=text;
-    endScreen.style.display='flex';
+// --- Mouvements & logique ---
+function updatePlayer(){
+    let fwd=0, turn=0;
+    if(controlMode==='wasd'){ fwd=(keys['w']?1:0)-(keys['s']?1:0); turn=(keys['d']?1:0)-(keys['a']?1:0); }
+    else if(controlMode==='zqsd'){ fwd=(keys['z']?1:0)-(keys['s']?1:0); turn=(keys['d']?1:0)-(keys['q']?1:0); }
+    else{ fwd=(keys['ArrowUp']?1:0)-(keys['ArrowDown']?1:0); turn=(keys['ArrowRight']?1:0)-(keys['ArrowLeft']?1:0); }
+
+    const sprint = keys['f'] && localPlayer.stamina>0;
+    const speed = sprint?0.8:0.4;
+    localPlayer.rotY += turn*0.05;
+    localPlayer.x += Math.sin(localPlayer.rotY)*fwd*speed;
+    localPlayer.z += Math.cos(localPlayer.rotY)*fwd*speed;
+
+    if(sprint) localPlayer.stamina-=0.5;
+    else if(localPlayer.stamina<100) localPlayer.stamina+=0.3;
+
+    localPlayer.speed = fwd*speed*100; // km/h pour affichage
+    localPlayer.mesh.position.set(localPlayer.x,2.5,localPlayer.z);
+    localPlayer.mesh.rotation.y = localPlayer.rotY;
+
+    socket.emit('player_state', localPlayer);
 }
 
-// --- 3D setup ---
-function init3D(){
-    scene=new THREE.Scene();
-    camera=new THREE.PerspectiveCamera(75,window.innerWidth/window.innerHeight,0.1,1000);
-    camera.position.set(0,20,30);
-    renderer=new THREE.WebGLRenderer({antialias:true});
-    renderer.setSize(window.innerWidth,window.innerHeight);
-    document.body.appendChild(renderer.domElement);
-
-    loader = new THREE.GLTFLoader();
-    // simple cube pour les autres joueurs pour prototype
-    for(const id in players){
-        const geometry = new THREE.BoxGeometry(1,1,1);
-        const material = new THREE.MeshStandardMaterial({color:players[id].color});
-        const mesh = new THREE.Mesh(geometry,material);
-        goatModels[id]=mesh;
-        scene.add(mesh);
-    }
-
-    const light = new THREE.DirectionalLight(0xffffff,1);
-    light.position.set(10,20,10);
-    scene.add(light);
-
-    animate();
-}
-
-// --- Animate loop ---
+// --- Animation 3D ---
 function animate(){
     requestAnimationFrame(animate);
-    handleInput3D();
-    updateModels();
+    updatePlayer();
     renderer.render(scene,camera);
-}
-
-// --- Input 3D ---
-document.addEventListener('keydown',e=>keys[e.key.toLowerCase()]=true);
-document.addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
-
-function handleInput3D(){
-    let fwd=0, strafe=0;
-    if(controlMode=='wasd'){
-        fwd=(keys['w']?1:0)-(keys['s']?1:0);
-        strafe=(keys['d']?1:0)-(keys['a']?1:0);
-    } else if(controlMode=='zqsd'){
-        fwd=(keys['z']?1:0)-(keys['s']?1:0);
-        strafe=(keys['d']?1:0)-(keys['q']?1:0);
-    } else if(controlMode=='arrows'){
-        fwd=(keys['arrowup']?1:0)-(keys['arrowdown']?1:0);
-        strafe=(keys['arrowright']?1:0)-(keys['arrowleft']?1:0);
-    }
-
-    const speed = keys['f']?0.2:0.1;
-    localPlayer.x+=fwd*speed;
-    localPlayer.z+=strafe*speed;
-    speedDisplay.textContent=`Vitesse: ${Math.round(speed*1500)} km/h`;
-
-    // update player position to server
-    socket.emit('player_state',localPlayer);
-}
-
-// --- Update 3D player models ---
-function updateModels(){
-    for(const id in players){
-        if(!goatModels[id]){
-            const geometry = new THREE.BoxGeometry(1,1,1);
-            const material = new THREE.MeshStandardMaterial({color:players[id].color});
-            const mesh = new THREE.Mesh(geometry,material);
-            goatModels[id]=mesh;
-            scene.add(mesh);
-        }
-        goatModels[id].position.set(players[id].x,0,players[id].z);
-    }
+    camera.position.set(localPlayer.x,20,localPlayer.z+20);
+    camera.lookAt(localPlayer.mesh.position);
+    speedDiv.textContent = `Vitesse: ${Math.round(localPlayer.speed*3)} km/h`;
 }
