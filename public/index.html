@@ -1,70 +1,87 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Goat Battle Royale 3D</title>
 <style>
-  html, body { margin: 0; padding: 0; overflow: hidden; font-family: Arial; background: #87ceeb; }
-  #menu, #menu2, #endScreen { position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.7); display:flex; justify-content:center; align-items:center; flex-direction:column; z-index:10; color:white; }
-  #menu2 { display:none; flex-direction:column; }
-  button { margin:5px; padding:10px 20px; font-size:16px; cursor:pointer; }
-  #canvas3d { display:block; }
-  #hud { position:absolute; bottom:10px; left:10px; color:white; font-size:16px; z-index:5; }
-  #chat { position:absolute; right:10px; bottom:10px; width:200px; height:200px; background:rgba(0,0,0,0.5); overflow-y:auto; padding:5px; color:white; font-size:14px; }
-  #chatInput { position:absolute; right:10px; bottom:0; width:200px; }
+  html,body{height:100%;margin:0;font-family:Inter,Arial,Helvetica,sans-serif; background:linear-gradient(#87CEEB,#bfeaff);}
+  #canvas3d{display:block;width:100vw;height:100vh; background:linear-gradient(#87CEEB,#bfeaff);}
+  .overlay{position:fixed;left:0;top:0;width:100%;height:100%;pointer-events:none;}
+  .ui {position:fixed; z-index:60; pointer-events:auto;}
+  #menu, #lobby, #endScreen {position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); background:rgba(0,0,0,0.78); color:white; padding:18px; border-radius:8px; width:360px; box-sizing:border-box;}
+  #menu input,#menu select,#lobby input,#lobby select,#menu button,#lobby button {width:100%; padding:8px; margin:6px 0; box-sizing:border-box;}
+  #hud {position:fixed; left:12px; bottom:12px; color:#fff; z-index:50; text-shadow:0 1px 4px rgba(0,0,0,0.7);}
+  #hud div{margin:6px 0; background:rgba(0,0,0,0.25); padding:6px 10px; border-radius:6px;}
+  #chat {position:fixed; right:12px; bottom:12px; width:300px; max-height:50vh; overflow:auto; z-index:50; color:#fff; font-size:14px;}
+  #chatMessages{background:rgba(0,0,0,0.45); padding:8px; max-height:40vh; overflow:auto; border-radius:6px;}
+  #chatInputWrap{display:flex; margin-top:6px;}
+  #chatInput{flex:1;padding:8px;border-radius:6px;border:0;}
+  #sendChat{padding:8px;margin-left:6px;}
+  #crosshair{position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); width:8px; height:8px; background:#ff3b3b; border-radius:50%; z-index:40; pointer-events:none; display:none;}
+  #speedometer{position:fixed; right:12px; top:12px; color:#fff; z-index:50; text-shadow:0 1px 4px rgba(0,0,0,0.7);}
+  .playerLabel { position: absolute; transform: translate(-50%,-100%); white-space:nowrap; padding:2px 6px; background:rgba(0,0,0,0.6); color:#fff; border-radius:4px; font-size:12px; pointer-events:none; }
 </style>
 </head>
 <body>
+  <canvas id="canvas3d"></canvas>
 
-<!-- Menu principal -->
-<div id="menu">
-  <h1>Goat Battle Royale</h1>
-  <input type="text" id="pseudo" placeholder="Pseudo" />
-  <select id="controls">
-    <option value="wasd">WASD</option>
-    <option value="arrows">Flèches</option>
-  </select>
-  <input type="color" id="color" value="#ff9966" />
-  <button id="startBtn">Jouer</button>
-</div>
-
-<!-- Menu secondaire / lobby -->
-<div id="menu2">
-  <h2>Lobby</h2>
-  <div>
-    <button id="publicBtn">Public</button>
-    <button id="privateBtn">Privé</button>
+  <div id="menu" class="ui">
+    <h2>Goat Battle Royale</h2>
+    <input id="pseudo" placeholder="Pseudo (ex: Jean)"/>
+    <input id="color" type="color" value="#ff9966"/>
+    <label>Contrôles</label>
+    <select id="controls">
+      <option value="wasd">WASD</option>
+      <option value="zqsd">ZQSD</option>
+      <option value="arrows">Flèches</option>
+    </select>
+    <button id="btnNext">Suivant → Lobby</button>
   </div>
-  <input type="text" id="inviteInput" placeholder="Inviter un ami (pseudo)" />
-  <button id="inviteBtn">Inviter</button>
-  <div id="playersList"></div>
-  <button id="launchBtn">Lancer la partie</button>
-</div>
 
-<!-- Canvas 3D -->
-<canvas id="canvas3d"></canvas>
+  <div id="lobby" class="ui" style="display:none;">
+    <h3>Lobby</h3>
+    <div>Mode:</div>
+    <select id="modeSelect">
+      <option value="public">Public</option>
+      <option value="private">Privé</option>
+    </select>
+    <div>Nombre d'IA (privé):</div>
+    <input id="aiCount" type="number" value="5" min="0" max="20"/>
+    <input id="inviteName" placeholder="Inviter par pseudo (ex: Paul)"/>
+    <button id="btnInvite">Inviter</button>
+    <div style="margin-top:8px;"><strong>Joueurs :</strong><div id="playersList" style="margin-top:6px;"></div></div>
+    <button id="btnLaunch" style="margin-top:12px;">Lancer la partie (host)</button>
+    <button id="btnBackLobby" style="margin-top:6px;">Retour</button>
+  </div>
 
-<!-- HUD -->
-<div id="hud">
-  <div>Kills: <span id="kills">0</span></div>
-  <div>Top: <span id="top">0</span></div>
-  <div>Vitesse: <span id="speed">0</span> km/h</div>
-  <div>Stamina: <span id="stamina">100</span></div>
-</div>
+  <div id="endScreen" class="ui" style="display:none;">
+    <h2 id="endTitle">GAME OVER</h2>
+    <div id="endInfo"></div>
+    <button id="btnBackMenu">Retour au menu</button>
+  </div>
 
-<!-- Chat texte -->
-<div id="chat"></div>
-<input id="chatInput" placeholder="Écrire..." />
+  <div id="hud" class="ui">
+    <div>Kills: <span id="hudKills">0</span></div>
+    <div>Top: <span id="hudTop">0</span></div>
+    <div>Vitesse: <span id="hudSpeed">0</span> km/h</div>
+    <div>Stamina: <span id="hudStamina">100</span>%</div>
+  </div>
 
-<!-- Écran de fin -->
-<div id="endScreen" style="display:none; flex-direction:column;">
-  <h1 id="endText"></h1>
-  <button id="backToMenu">Retour au menu</button>
-</div>
+  <div id="chat" class="ui">
+    <div id="chatMessages"></div>
+    <div id="chatInputWrap">
+      <input id="chatInput" placeholder="Message..."/>
+      <button id="sendChat">OK</button>
+    </div>
+  </div>
 
-<script src="/socket.io/socket.io.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.154.0/build/three.min.js"></script>
-<script src="main.js"></script>
+  <div id="speedometer" class="ui"></div>
+  <div id="crosshair"></div>
 
+  <!-- three + socket.io are loaded from server -->
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
+  <script src="main.js"></script>
 </body>
 </html>
