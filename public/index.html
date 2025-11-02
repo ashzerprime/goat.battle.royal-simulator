@@ -2,51 +2,62 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>Goat Battle Royale 3D </title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Goat Battle Royale 3D</title>
 <style>
-  body, html { margin:0; padding:0; overflow:hidden; font-family:sans-serif; }
-  #menu, #menu2, #endScreen { position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); display:flex; flex-direction:column; justify-content:center; align-items:center; color:#fff; z-index:10; }
+  body, html { margin:0; padding:0; overflow:hidden; font-family:Arial; }
+  #menu, #menu2, #endScreen { position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); color:white; display:flex; flex-direction:column; align-items:center; justify-content:center; }
   #menu2 { display:none; }
   #endScreen { display:none; }
-  input, select, button { margin:5px; padding:8px; font-size:16px; }
-  #speed { position:absolute; bottom:10px; right:10px; color:#fff; font-size:18px; background:rgba(0,0,0,0.5); padding:5px 10px; border-radius:5px; }
-  canvas { display:block; background:#88cc88; }
+  button { padding:10px 20px; margin:5px; }
+  input, select { margin:5px; padding:5px; }
+  #chat { position:absolute; bottom:0; right:0; width:250px; max-height:300px; background:rgba(0,0,0,0.5); overflow:auto; color:white; padding:5px; display:flex; flex-direction:column; }
+  #chat input { width:100%; margin-top:5px; }
+  #speed { position:absolute; bottom:10px; left:10px; color:white; font-weight:bold; font-size:18px; }
 </style>
 </head>
 <body>
-  <!-- Menu principal -->
-  <div id="menu">
-    <h1>Goat Battle Royale </h1>
-    <input type="text" id="pseudo" placeholder="Pseudo">
-    <input type="color" id="color" value="#ff9966">
-    <select id="controls">
-      <option value="wasd">WASD</option>
-      <option value="zqsd">ZQSD</option>
-      <option value="arrows">Flèches</option>
-    </select>
-    <button id="startBtn">Jouer</button>
+<div id="menu">
+  <h1>Goat Battle Royale</h1>
+  <input type="text" id="pseudo" placeholder="Pseudo">
+  <input type="color" id="color" value="#ff9966">
+  <select id="controls">
+    <option value="wasd">WASD</option>
+    <option value="zqsd">ZQSD</option>
+    <option value="arrows">Flèches</option>
+  </select>
+  <button id="startBtn">Jouer</button>
+</div>
+
+<div id="menu2">
+  <h2>Lobby</h2>
+  <label><input type="radio" name="mode" value="public" checked> Publique</label>
+  <label><input type="radio" name="mode" value="private"> Privée</label>
+  <div id="iaCountDiv" style="display:none;">
+    Nombre d'IA: <input type="number" id="iaCount" min="1" max="10" value="3">
   </div>
+  <input type="text" id="invitePseudo" placeholder="Pseudo ami">
+  <button id="inviteBtn">Inviter</button>
+  <div>Joueurs dans le lobby: <span id="playerList"></span></div>
+  <button id="launchBtn">Lancer Partie</button>
+  <button id="backMenu1Btn">Retour</button>
+</div>
 
-  <!-- Menu 2 -->
-  <div id="menu2">
-    <h2>Paramètres de la partie</h2>
-    <button id="publicBtn">Publique</button>
-    <button id="privateBtn">Privée</button>
-    <input type="text" id="inviteInput" placeholder="Pseudo ami">
-    <button id="inviteBtn">Inviter</button>
-    <div id="countdown">Temps restant: <span id="countNum">5</span></div>
-  </div>
+<div id="endScreen">
+  <h1 id="endText"></h1>
+  <button id="backToMenu">Retour au menu</button>
+</div>
 
-  <!-- Écran de fin -->
-  <div id="endScreen">
-    <h1 id="endText"></h1>
-    <button id="backToMenu">Retour au menu</button>
-  </div>
+<div id="chat">
+  <div id="chatMessages"></div>
+  <input type="text" id="chatInput" placeholder="Écrire...">
+</div>
 
-  <canvas id="canvas3d" width="800" height="600"></canvas>
-  <div id="speed">Vitesse: 0 km/h</div>
+<div id="speed">Vitesse: 0 km/h</div>
 
-  <script src="/socket.io/socket.io.js"></script>
-  <script src="main.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script src="main.js"></script>
 </body>
 </html>
