@@ -1,103 +1,102 @@
-// server.js — Goat Battle Royale backend
-
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
-const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-const PORT = process.env.PORT || 3000;
+app.use(express.static('public'));
 
-// servir les fichiers du dossier public
-app.use(express.static(path.join(__dirname, 'public')));
+const rooms = {}; // { roomId: { players:{socketId:player}, private:boolean, host:socketId, bots:[] } }
 
-// --- Données en mémoire ---
-let rooms = {}; // { roomId: { host, players: {} } }
-
-// --- Fonctions utiles ---
-function createRoom(socket, data) {
-  const roomId = Math.random().toString(36).substring(2, 8);
-  rooms[roomId] = {
-    host: socket.id,
-    players: {
-      [socket.id]: {
-        id: socket.id,
-        name: data.name || 'Chèvre',
-        color: data.color || '#ff9966',
-        x: 400,
-        y: 300,
-        angle: 0,
-        lives: 3
-      }
-    }
-  };
-  socket.join(roomId);
-  io.to(roomId).emit('room_update', rooms[roomId]);
-  socket.emit('room_created', { ok: true, roomId, host: true });
-  console.log(`✅ Nouvelle salle ${roomId} créée par ${data.name}`);
+// ---- Utils ----
+function generateId() {
+  return Math.random().toString(36).substr(2, 6);
 }
 
-function joinRoom(socket, roomId, name, color) {
+function createBot(id) {
+  return { id, name:'Bot-'+id, x:Math.random()*700+50, y:Math.random()*500+50, angle:Math.random()*Math.PI*2, color:'#ccc', lives:3 };
+}
+
+function broadcastRoom(roomId) {
   const room = rooms[roomId];
-  if (!room) return socket.emit('error_msg', 'Salle introuvable');
-  room.players[socket.id] = {
-    id: socket.id,
-    name,
-    color,
-    x: 100 + Math.random() * 600,
-    y: 100 + Math.random() * 400,
-    angle: 0,
-    lives: 3
-  };
-  socket.join(roomId);
-  io.to(roomId).emit('room_update', room);
-  console.log(`👥 ${name} a rejoint ${roomId}`);
+  if(!room) return;
+  io.to(roomId).emit('room_update', { players: room.players });
 }
 
-// --- Gestion des connexions Socket.IO ---
-io.on('connection', (socket) => {
-  console.log('🟢 Client connecté', socket.id);
+// ---- Socket.IO ----
+io.on('connection', socket => {
+  console.log('⚡ Connecté :', socket.id);
 
-  socket.on('create_room', (data, callback) => {
-    createRoom(socket, data);
-    if (callback) callback({ ok: true });
+  socket.on('create_room', ({ name, color, privateMode=false }, callback) => {
+    const roomId = generateId();
+    rooms[roomId] = { players:{}, private:privateMode, host:socket.id, bots:[] };
+    rooms[roomId].players[socket.id] = { id:socket.id, name, color, x:400, y:300, angle:0, lives:3, kills:0 };
+    socket.join(roomId);
+    callback({ ok:true, roomId });
+    console.log('🛠 Room créée:', roomId);
   });
 
-  socket.on('join_room', ({ roomId, name, color }) => {
-    joinRoom(socket, roomId, name, color);
+  socket.on('join_room', ({ roomId, name, color }, callback) => {
+    const room = rooms[roomId];
+    if(!room) return callback({ ok:false, error:'Salle introuvable' });
+    room.players[socket.id] = { id:socket.id, name, color, x:400, y:300, angle:0, lives:3, kills:0 };
+    socket.join(roomId);
+    broadcastRoom(roomId);
+    callback({ ok:true });
   });
 
-  socket.on('player_state', (data) => {
-    for (const r in rooms) {
-      if (rooms[r].players[socket.id]) {
-        Object.assign(rooms[r].players[socket.id], data);
-        io.to(r).emit('room_update', rooms[r]);
-      }
+  socket.on('invite_friend', friendName => {
+    // Pour simplifier, on pourrait gérer un mapping pseudo -> socketId
+    console.log(`${socket.id} invite ${friendName}`);
+  });
+
+  socket.on('start_match', roomId => {
+    const room = rooms[roomId];
+    if(!room) return;
+    // Ajouter 5 bots pour le mode privé
+    for(let i=0;i<5;i++){
+      const bot = createBot(generateId());
+      room.bots.push(bot);
+      room.players[bot.id] = bot;
     }
+    io.to(roomId).emit('match_started');
   });
 
-  socket.on('fire', (data) => {
-    for (const r in rooms) {
-      if (rooms[r].players[socket.id]) {
-        io.to(r).emit('explosion', { x: data.x, y: data.y });
-      }
-    }
+  socket.on('player_state', state => {
+    const roomsArr = Object.values(rooms).filter(r=>r.players[socket.id]);
+    if(!roomsArr.length) return;
+    const room = roomsArr[0];
+    room.players[socket.id] = {...room.players[socket.id], ...state };
+    broadcastRoom(Object.keys(rooms).find(k=>rooms[k]===room));
+  });
+
+  socket.on('fire', pos => {
+    const roomsArr = Object.values(rooms).filter(r=>r.players[socket.id]);
+    if(!roomsArr.length) return;
+    const room = roomsArr[0];
+    // Crée un projectile simple et broadcast
+    const projectile = { x:pos.x, y:pos.y, owner:socket.id };
+    io.to(Object.keys(rooms).find(k=>rooms[k]===room)).emit('projectile_fired', projectile);
   });
 
   socket.on('disconnect', () => {
-    console.log('🔴 Déconnexion', socket.id);
-    for (const r in rooms) {
-      const room = rooms[r];
-      if (room.players[socket.id]) {
+    console.log('❌ Déconnecté :', socket.id);
+    for(const roomId in rooms){
+      const room = rooms[roomId];
+      if(room.players[socket.id]){
         delete room.players[socket.id];
-        if (Object.keys(room.players).length === 0) delete rooms[r];
-        else io.to(r).emit('room_update', room);
+        broadcastRoom(roomId);
+        if(Object.keys(room.players).length===0){
+          delete rooms[roomId];
+          console.log('🗑 Room supprimée:', roomId);
+        }
       }
     }
   });
 });
 
-server.listen(PORT, () => console.log(`🚀 Serveur lancé sur ${PORT}`));
+// ---- Serveur ----
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => console.log(`🚀 Serveur lancé sur http://localhost:${PORT}`));
