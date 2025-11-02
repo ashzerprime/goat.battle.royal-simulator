@@ -1,57 +1,56 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <title>Goat Battle Royale 🐐</title>
-  <style>
-    html, body { margin:0; padding:0; overflow:hidden; font-family:Arial, sans-serif; background:#a3d9a5; }
-    #menu, #lobbyMenu, #endScreen { position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); display:flex; flex-direction:column; justify-content:center; align-items:center; }
-    #menu input, #menu select, #menu button { margin:5px; padding:8px; font-size:16px; }
-    #endScreen { display:none; color:white; font-size:32px; justify-content:center; align-items:center; flex-direction:column; }
-    #lobbyMenu { display:none; flex-direction:column; color:white; font-size:20px; }
-    canvas { display:block; background:#a3d9a5; margin:0 auto; }
-    #ui { position:absolute; top:10px; left:10px; color:white; font-size:18px; }
-    #speed { position:absolute; bottom:10px; right:10px; color:white; font-size:18px; }
-  </style>
+<meta charset="UTF-8">
+<title>Goat Battle Royale 🐐</title>
+<style>
+  html, body { margin:0; padding:0; overflow:hidden; font-family: Arial, sans-serif; background:#ccc;}
+  #menu, #lobby, #endScreen { position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); display:flex; justify-content:center; align-items:center; flex-direction:column; color:#fff; }
+  #menu { display:flex; }
+  button { padding:10px 20px; margin:5px; font-size:16px; cursor:pointer; }
+  #canvas3d { display:block; background:#88c070; width:100%; height:100vh; }
+  #stats { position:absolute; bottom:10px; right:10px; color:#000; background:rgba(255,255,255,0.6); padding:5px 10px; border-radius:5px; font-weight:bold;}
+  input, select { padding:5px; margin:5px; font-size:14px;}
+</style>
 </head>
 <body>
-  <!-- Menu principal -->
-  <div id="menu">
-    <h1>🐐 Goat Battle Royale</h1>
-    <input type="text" id="pseudo" placeholder="Pseudo">
-    <input type="color" id="color" value="#ff9966">
-    <select id="controls">
-      <option value="wasd">WASD</option>
-      <option value="arrows">Flèches</option>
-    </select>
-    <button id="startBtn">Créer / Jouer</button>
-  </div>
 
-  <!-- Lobby multijoueur -->
-  <div id="lobbyMenu">
-    <h2>Lobby</h2>
-    <button id="inviteBtn">Inviter un ami</button>
-    <p>En attente que le host commence le match...</p>
-  </div>
+<!-- Menu principal -->
+<div id="menu">
+  <h1>🐐 Goat Battle Royale</h1>
+  <input id="pseudo" placeholder="Ton pseudo">
+  <input type="color" id="color" value="#ff9966">
+  <label>Contrôles:</label>
+  <select id="controls">
+    <option value="wasd">WASD</option>
+    <option value="arrows">Flèches</option>
+  </select>
+  <button id="startBtn">Jouer</button>
+  <button id="inviteBtn">Inviter un ami</button>
+</div>
 
-  <!-- Écran de fin -->
-  <div id="endScreen">
-    <div id="endText">GAME OVER</div>
-    <button id="backToMenu">Retour au menu</button>
-  </div>
+<!-- Lobby / menu2 -->
+<div id="lobby" style="display:none;">
+  <h2>Lobby 🐐</h2>
+  <p id="lobbyInfo">En attente du host...</p>
+  <button id="readyBtn">Prêt</button>
+  <button id="leaveBtn">Quitter</button>
+</div>
 
-  <!-- Canvas du jeu -->
-  <canvas id="canvas3d" width="800" height="600"></canvas>
+<!-- Canvas de jeu -->
+<canvas id="canvas3d"></canvas>
 
-  <!-- UI overlay -->
-  <div id="ui">
-    Vies: <span id="lives">3</span> | Kills: <span id="kills">0</span> | Top 1: <span id="top1">0</span>
-  </div>
-  <div id="speed">Vitesse: 0 km/h</div>
+<!-- Écran fin -->
+<div id="endScreen" style="display:none;">
+  <h1 id="endText"></h1>
+  <button id="backToMenu">Retour au menu</button>
+</div>
 
-  <!-- Socket.IO -->
-  <script src="/socket.io/socket.io.js"></script>
-  <!-- Main game script -->
-  <script src="main.js"></script>
+<div id="stats">
+  <span id="lives">3</span> ❤️ | <span id="kills">0</span> 🔫 | <span id="speed">0</span> km/h
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="main.js"></script>
 </body>
 </html>
