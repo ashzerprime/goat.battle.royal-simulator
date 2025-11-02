@@ -1,7 +1,9 @@
 // main.js - Goat Battle Royale 🐐
 
 // --- Connexion au serveur ---
-const socket = io('https://goatbattleroyal-simulator-production.up.railway.app');
+const socket = io('https://goatbattleroyal-simulator-production.up.railway.app', {
+  transports: ['websocket']
+});
 
 // --- Sélection UI ---
 const menu = document.getElementById('menu');
@@ -117,6 +119,7 @@ function handleInput() {
   // Tir
   if (keys['f']) {
     socket.emit('fire', { x: localPlayer.x, y: localPlayer.y });
+    createExplosion(localPlayer.x, localPlayer.y); // effet local
   }
 
   socket.emit('player_state', localPlayer);
@@ -181,5 +184,4 @@ function render() {
 function showEnd(text) {
   endText.innerText = text;
   endScreen.style.display = 'flex';
-  createExplosion(localPlayer.x, localPlayer.y);
 }
