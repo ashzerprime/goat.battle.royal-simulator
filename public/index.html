@@ -6,87 +6,111 @@
   <style>
     html, body {
       margin: 0;
+      padding: 0;
       overflow: hidden;
       font-family: Arial, sans-serif;
-      background: #87CEEB;
+      background: #87ceeb; /* ciel bleu */
     }
     #menu, #menu2, #endScreen {
       position: absolute;
       top: 0; left: 0;
       width: 100%; height: 100%;
-      background: rgba(0,0,0,0.8);
       display: flex;
       justify-content: center;
       align-items: center;
       flex-direction: column;
+      background: rgba(0,0,0,0.6);
       color: white;
-      z-index: 100;
+      z-index: 10;
     }
     #menu2 { display: none; }
     #endScreen { display: none; }
-    input, select, button { margin: 5px; padding: 8px; font-size: 14px; }
+    input, select, button {
+      padding: 10px;
+      margin: 5px;
+      font-size: 16px;
+    }
+    #canvas3d {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+      background: #87ceeb;
+    }
     #chat {
       position: absolute;
-      bottom: 10px; left: 10px;
-      width: 250px;
-      max-height: 200px;
+      bottom: 10px;
+      left: 10px;
+      width: 300px;
+      max-height: 300px;
+      overflow-y: auto;
       background: rgba(0,0,0,0.5);
       color: white;
-      overflow-y: auto;
-      font-size: 12px;
       padding: 5px;
-      z-index: 50;
+      font-size: 14px;
+      border-radius: 5px;
     }
-    #chatInput {
-      width: 250px;
+    #chat input {
+      width: 100%;
+      box-sizing: border-box;
+    }
+    #speedometer {
       position: absolute;
-      bottom: 0; left: 10px;
-      z-index: 50;
+      bottom: 10px;
+      right: 10px;
+      color: white;
+      background: rgba(0,0,0,0.5);
+      padding: 5px 10px;
+      border-radius: 5px;
+      font-size: 16px;
     }
-    canvas { display: block; }
   </style>
 </head>
 <body>
+  <!-- Menu principal -->
   <div id="menu">
     <h1>Goat Battle Royale 3D</h1>
-    <input id="pseudo" placeholder="Pseudo">
-    <input id="color" type="color" value="#ff9966">
+    <input type="text" id="pseudo" placeholder="Ton pseudo">
+    <input type="color" id="color" value="#ff9966">
     <select id="controls">
-      <option value="wasd">ZQSD / WASD</option>
+      <option value="wasd">WASD</option>
       <option value="arrows">Flèches</option>
     </select>
     <button id="startBtn">Jouer</button>
   </div>
 
+  <!-- Menu lobby (menu2) -->
   <div id="menu2">
     <h2>Lobby</h2>
-    <p id="roomInfo">Salle : ...</p>
-    <input id="inviteInput" placeholder="Pseudo à inviter">
-    <button id="inviteBtn">Inviter</button>
-    <button id="startGameBtn">Démarrer la partie</button>
-    <div id="settings">
-      <label>Mode: 
-        <select id="gameMode">
-          <option value="public">Public</option>
-          <option value="private">Privé</option>
-        </select>
-      </label>
-      <label>IA : <input type="number" id="aiCount" min="0" max="20" value="5"></label>
+    <div>
+      <button id="publicBtn">Public</button>
+      <button id="privateBtn">Privé</button>
     </div>
+    <input type="text" id="invitePseudo" placeholder="Pseudo ami">
+    <button id="inviteBtn">Inviter</button>
+    <div id="countdown">Démarrage dans : <span id="timer">10</span>s</div>
+    <div id="lobbyPlayers"></div>
   </div>
 
+  <!-- End screen -->
   <div id="endScreen">
-    <h1 id="endText">GAME OVER</h1>
+    <h1 id="endText"></h1>
     <button id="backToMenu">Retour au menu</button>
   </div>
 
-  <canvas id="gameCanvas"></canvas>
+  <!-- Canvas 3D -->
+  <canvas id="canvas3d"></canvas>
 
-  <div id="chat"></div>
-  <input id="chatInput" placeholder="Taper un message" type="text">
+  <!-- Chat -->
+  <div id="chat">
+    <div id="chatMessages"></div>
+    <input type="text" id="chatInput" placeholder="Écrire...">
+  </div>
 
+  <!-- Speedometer -->
+  <div id="speedometer">0 km/h</div>
+
+  <!-- Scripts -->
   <script src="/socket.io/socket.io.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.155.0/build/three.min.js"></script>
   <script src="main.js"></script>
 </body>
 </html>
