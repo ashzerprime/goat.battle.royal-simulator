@@ -1,169 +1,179 @@
-// public/main.js - client: invites + lobby chat + basic 3D hook
-const socket = io({ transports: ['websocket'] });
+// main.js — Goat Battle Royale 🐐 FINAL EDITION
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.161/build/three.module.js';
 
-// UI elements
-const createRoomBtn = document.getElementById('createRoomBtn');
-const joinRoomBtn = document.getElementById('joinRoomBtn');
+// --- Connexion au serveur ---
+const socket = io();
+
+// --- Éléments UI ---
+const menu = document.getElementById('menu');
+const lobby = document.getElementById('lobby');
+const startBtn = document.getElementById('startBtn');
+const createBtn = document.getElementById('createBtn');
+const joinBtn = document.getElementById('joinBtn');
 const pseudoInput = document.getElementById('pseudo');
-const colorInput = document.getElementById('color');
-const joinRoomIdInput = document.getElementById('joinRoomId');
-const lobbyDiv = document.getElementById('lobby');
-const roomLabel = document.getElementById('roomLabel');
-const lobbyPlayers = document.getElementById('lobbyPlayers');
-const inviteNameInput = document.getElementById('inviteName');
-const inviteBtn = document.getElementById('inviteBtn');
-const pendingInvitesDiv = document.getElementById('pendingInvites');
+const roomInput = document.getElementById('roomInput');
+const chatInput = document.getElementById('chatInput');
+const chatBox = document.getElementById('chatBox');
 
-const invitePrompt = document.getElementById('invitePrompt');
-const inviteText = document.getElementById('inviteText');
-const acceptInviteBtn = document.getElementById('acceptInvite');
-const declineInviteBtn = document.getElementById('declineInvite');
+// --- Variables globales ---
+let scene, camera, renderer;
+let localPlayer, goats = {};
+let bullets = [];
+let isHost = false;
+let roomId = null;
+let keys = {};
+let stamina = 10;
+let speed = 0;
 
-const lobbyChat = document.getElementById('lobbyChat');
-const lobbyChatInput = document.getElementById('lobbyChatInput');
-const sendLobbyChat = document.getElementById('sendLobbyChat');
+// --- Sons ---
+const shootSound = new Audio("https://cdn.pixabay.com/download/audio/2021/09/20/audio_c2a28ef98b.mp3");
+const sprintSound = new Audio("https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8a2f9651f.mp3");
 
-const gameChat = document.getElementById('gameChat');
-const gameChatInput = document.getElementById('gameChatInput');
-const sendGameChat = document.getElementById('sendGameChat');
+// --- Initialisation Three.js ---
+function init3D() {
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x87ceeb);
 
-const startMatchBtn = document.getElementById('startMatchBtn');
+  const light = new THREE.DirectionalLight(0xffffff, 1);
+  light.position.set(5, 10, 7);
+  scene.add(light);
 
-// local state
-let myName = null;
-let myColor = '#ff9966';
-let currentRoom = null;
-let pendingInviteFrom = null;
+  const groundGeo = new THREE.PlaneGeometry(2000, 2000);
+  const groundMat = new THREE.MeshStandardMaterial({ color: 0x228b22 });
+  const ground = new THREE.Mesh(groundGeo, groundMat);
+  ground.rotation.x = -Math.PI / 2;
+  scene.add(ground);
 
-// Register user (local)
-function registerLocal(cb){
-  myName = (pseudoInput.value || '').trim();
-  if(!myName){ alert('Choisis un pseudo'); return; }
-  myColor = colorInput.value || '#ff9966';
-  socket.emit('register', { name: myName, color: myColor }, (res) => { cb?.(res); });
+  camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
+  camera.position.set(0, 10, 20);
+
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  document.body.appendChild(renderer.domElement);
 }
 
-// Create room
-createRoomBtn.onclick = () => {
-  registerLocal(() => {
-    socket.emit('create_room', { name: myName, color: myColor }, (res) => {
-      if(res.ok){ currentRoom = res.roomId; showLobby(); }
-      else alert(res.error || 'Erreur création');
-    });
-  });
-};
-
-// Join room by ID
-joinRoomBtn.onclick = () => {
-  const rid = joinRoomIdInput.value.trim();
-  if(!rid){ alert('Donne l\'ID'); return; }
-  registerLocal(() => {
-    socket.emit('join_room', { roomId: rid, name: myName, color: myColor }, (res) => {
-      if(res.ok){ currentRoom = rid; showLobby(); }
-      else alert(res.error || 'Impossible de rejoindre');
-    });
-  });
-};
-
-// show lobby UI
-function showLobby(){
-  document.getElementById('menu').style.display = 'none';
-  lobbyDiv.style.display = 'block';
-  roomLabel.innerText = currentRoom ? `#${currentRoom}` : '(salle inconnue)';
+// --- Créer le joueur ---
+function createPlayer(name, color) {
+  const geometry = new THREE.BoxGeometry(2, 2, 4);
+  const material = new THREE.MeshStandardMaterial({ color });
+  const goat = new THREE.Mesh(geometry, material);
+  goat.position.set(Math.random() * 100 - 50, 1, Math.random() * 100 - 50);
+  goat.name = name;
+  scene.add(goat);
+  return goat;
 }
 
-// Invite
-inviteBtn.onclick = () => {
-  const target = inviteNameInput.value.trim();
-  if(!target) return alert('Entrez un pseudo');
-  socket.emit('invite', { targetName: target }, (res) => {
-    if(res && res.ok) {
-      pendingInvitesDiv.innerHTML += `<div>Invitation envoyée à <b>${target}</b></div>`;
-    } else {
-      alert(res?.error || 'Impossible d\'inviter');
+// --- Boucle de rendu ---
+function animate() {
+  requestAnimationFrame(animate);
+
+  // Gestion des touches
+  let moveSpeed = 0.4;
+  if (keys['f'] && stamina > 0) {
+    moveSpeed = 1.2;
+    stamina -= 0.05;
+    sprintSound.play();
+  } else if (stamina < 10) stamina += 0.02;
+
+  const forward = keys['z'] || keys['w'] || keys['arrowup'];
+  const back = keys['s'] || keys['arrowdown'];
+  const left = keys['q'] || keys['a'] || keys['arrowleft'];
+  const right = keys['d'] || keys['arrowright'];
+
+  if (localPlayer) {
+    if (forward) localPlayer.position.z -= moveSpeed;
+    if (back) localPlayer.position.z += moveSpeed;
+    if (left) localPlayer.position.x -= moveSpeed;
+    if (right) localPlayer.position.x += moveSpeed;
+    camera.position.lerp(
+      new THREE.Vector3(localPlayer.position.x, localPlayer.position.y + 10, localPlayer.position.z + 20),
+      0.1
+    );
+    camera.lookAt(localPlayer.position);
+  }
+
+  // Déplacement des balles
+  bullets.forEach((b, i) => {
+    b.position.add(b.userData.velocity);
+    if (b.position.length() > 1000) {
+      scene.remove(b);
+      bullets.splice(i, 1);
     }
   });
-};
 
-// Receive invite request
-socket.on('invite_request', ({ fromName, roomId }) => {
-  // show prompt to accept/decline
-  invitePrompt.style.display = 'block';
-  inviteText.innerText = `${fromName} t'invite dans la salle ${roomId}`;
-  pendingInviteFrom = { fromName, roomId };
-});
+  renderer.render(scene, camera);
+}
 
-// Accept / decline invite
-acceptInviteBtn.onclick = () => {
-  if(!pendingInviteFrom) return;
-  socket.emit('invite_response', { fromName: pendingInviteFrom.fromName, roomId: pendingInviteFrom.roomId, accept: true });
-  invitePrompt.style.display = 'none';
-  pendingInviteFrom = null;
-};
-declineInviteBtn.onclick = () => {
-  if(!pendingInviteFrom) return;
-  socket.emit('invite_response', { fromName: pendingInviteFrom.fromName, roomId: pendingInviteFrom.roomId, accept: false });
-  invitePrompt.style.display = 'none';
-  pendingInviteFrom = null;
-};
+// --- Tir ---
+function shoot() {
+  if (!localPlayer) return;
+  shootSound.currentTime = 0;
+  shootSound.play();
+  const bulletGeo = new THREE.SphereGeometry(0.2, 8, 8);
+  const bulletMat = new THREE.MeshBasicMaterial({ color: 0xffcc00 });
+  const bullet = new THREE.Mesh(bulletGeo, bulletMat);
+  bullet.position.copy(localPlayer.position);
+  bullet.userData.velocity = new THREE.Vector3(0, 0, -2).applyEuler(localPlayer.rotation);
+  scene.add(bullet);
+  bullets.push(bullet);
+  socket.emit('shoot', { roomId });
+}
 
-// When invited user auto-joined server side -> server will send 'joined_room'
-socket.on('joined_room', ({ roomId }) => {
-  currentRoom = roomId;
-  showLobby();
-});
-
-// invite response arrives back to inviter
-socket.on('invite_response', ({ from, accept }) => {
-  pendingInvitesDiv.innerHTML += `<div>${from} a ${accept ? 'accepté' : 'refusé'} l'invitation</div>`;
-  // if accepted, server already added them and broadcasted room_update
-});
-
-// Lobby chat
-sendLobbyChat.onclick = () => {
-  const t = lobbyChatInput.value.trim();
-  if(!t || !currentRoom) return;
-  socket.emit('lobby_chat', { text: t });
-  lobbyChatInput.value = '';
-};
-socket.on('lobby_chat', ({ name, text }) => {
-  lobbyChat.innerHTML += `<div><b>${name}:</b> ${text}</div>`;
-  lobbyChat.scrollTop = lobbyChat.scrollHeight;
-});
-
-// Game chat (in-game)
-sendGameChat.onclick = () => {
-  const t = gameChatInput.value.trim();
-  if(!t || !currentRoom) return;
-  socket.emit('game_chat', { text: t });
-  gameChatInput.value = '';
-};
-socket.on('game_chat', ({ name, text }) => {
-  gameChat.innerHTML += `<div><b>${name}:</b> ${text}</div>`;
-  gameChat.scrollTop = gameChat.scrollHeight;
-});
-
-// Room updates (players list + data)
-socket.on('room_update', (room) => {
-  // update local currentRoom if not set
-  if(!currentRoom) currentRoom = Object.keys(room)[0] || currentRoom;
-  // render players list
-  const players = room.players || room;
-  lobbyPlayers.innerHTML = '';
-  for(const sid in players){
-    const p = players[sid];
-    const el = document.createElement('div');
-    el.innerHTML = `<span style="display:inline-block;width:10px;height:10px;background:${p.color};margin-right:6px;border-radius:2px;"></span> ${p.name} ${sid===socket.id? '(moi)':''}`;
-    lobbyPlayers.appendChild(el);
+// --- Chat ---
+chatInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && chatInput.value.trim() !== '') {
+    socket.emit('chat_message', { roomId, msg: chatInput.value });
+    chatInput.value = '';
   }
 });
 
-// start match (host)
-startMatchBtn.onclick = () => {
-  if(!currentRoom) return alert('Pas de salle');
-  socket.emit('start_match', { aiCount: 6 });
+socket.on('chat_message', data => {
+  const msg = document.createElement('div');
+  msg.textContent = `${data.name}: ${data.msg}`;
+  chatBox.appendChild(msg);
+  chatBox.scrollTop = chatBox.scrollHeight;
+});
+
+// --- Connexion Socket.io ---
+socket.on('connect', () => console.log('✅ Connecté au serveur'));
+socket.on('room_joined', data => {
+  roomId = data.roomId;
+  isHost = data.isHost;
+  menu.style.display = 'none';
+  lobby.style.display = 'block';
+});
+socket.on('game_start', data => {
+  lobby.style.display = 'none';
+  init3D();
+  localPlayer = createPlayer(data.name, data.color);
+  animate();
+});
+
+// --- Création & rejoindre ---
+createBtn.onclick = () => {
+  const name = pseudoInput.value.trim() || "Chèvre";
+  socket.emit('create_room', { name }, res => {
+    if (res.ok) console.log('Salle créée', res.roomId);
+  });
 };
 
-// misc
-socket.on('connect', ()=>console.log('connected', socket.id));
-socket.on('disconnect', ()=>console.log('disconnected'));
+joinBtn.onclick = () => {
+  const name = pseudoInput.value.trim() || "Chèvre";
+  const room = roomInput.value.trim();
+  socket.emit('join_room', { name, roomId: room }, res => {
+    if (res.ok) console.log('Rejoint la salle', room);
+  });
+};
+
+// --- Lancer la partie ---
+startBtn.onclick = () => {
+  if (!isHost) return alert("Seul l'hôte peut lancer !");
+  socket.emit('start_game', { roomId });
+};
+
+// --- Touches ---
+document.addEventListener('keydown', e => {
+  keys[e.key.toLowerCase()] = true;
+  if (e.key === 'g') shoot();
+});
+document.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
