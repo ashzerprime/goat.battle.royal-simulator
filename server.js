@@ -1,162 +1,139 @@
-// server.js - Socket.IO server with invites + lobby & game chat
+// server.js (CommonJS) - final pour ton projet
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
+const path = require('path');
+
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: "*" } });
+const io = new Server(server);
 
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, 'public')));
 
 const PORT = process.env.PORT || 3000;
 
-let rooms = {}; // roomId -> { host, players: { socketId: {name,color,x,y,angle,lives} }, mode }
-let nameToSocket = {}; // name -> socketId (latest connected socket with that name)
+let rooms = {}; // roomId -> { host, players: { socketId: { name,color,x,z,angle } } }
+let nameToSocket = {}; // pseudo -> socketId
 
-// helpers
-function makeRoomId() { return Math.random().toString(36).substr(2,6); }
+function makeRoomId() {
+  return Math.random().toString(36).substr(2,6).toUpperCase();
+}
 
-io.on('connection', socket => {
-  console.log('conn:', socket.id);
+io.on('connection', (socket) => {
+  console.log('connect', socket.id);
 
-  // register user (called on create_room or join_room)
-  socket.on('register', ({ name, color, preferredRoom }, cb) => {
-    nameToSocket[name] = socket.id;
-    socket.data.name = name;
-    socket.data.color = color || '#ff9966';
-    console.log('register', name, socket.id);
-    cb?.({ ok: true });
-  });
-
-  // create room
   socket.on('create_room', ({ name, color, mode }, cb) => {
     const roomId = makeRoomId();
-    rooms[roomId] = { host: socket.id, players: {}, mode: mode || 'private' };
-    rooms[roomId].players[socket.id] = { name, color, x:0, z:0, angle:0, lives:3 };
+    rooms[roomId] = { host: socket.id, players: {} };
+    rooms[roomId].players[socket.id] = { name, color, x: 0, z: 0, angle: 0 };
     socket.join(roomId);
-    socket.data.room = roomId;
-    nameToSocket[name] = socket.id;
     socket.data.name = name;
     socket.data.color = color;
-    console.log(`${name} created room ${roomId}`);
-    io.to(roomId).emit('room_update', rooms[roomId]);
-    cb?.({ ok: true, roomId });
+    nameToSocket[name] = socket.id;
+    socket.emit('joined_room', { roomId, isHost: true });
+    io.to(roomId).emit('room_update', { roomId, host: rooms[roomId].host, players: rooms[roomId].players });
+    if (cb) cb({ ok: true, roomId });
   });
 
-  // join existing room by id
   socket.on('join_room', ({ roomId, name, color }, cb) => {
     const room = rooms[roomId];
-    if (!room) return cb?.({ ok: false, error: 'Salle introuvable' });
-    room.players[socket.id] = { name, color, x:0, z:0, angle:0, lives:3 };
+    if (!room) return cb ? cb({ ok: false, error: 'Salle introuvable' }) : null;
+    room.players[socket.id] = { name, color, x: 0, z: 0, angle: 0 };
     socket.join(roomId);
-    socket.data.room = roomId;
     socket.data.name = name;
     socket.data.color = color;
     nameToSocket[name] = socket.id;
-    io.to(roomId).emit('room_update', room);
-    cb?.({ ok: true, roomId });
+    socket.emit('joined_room', { roomId, isHost: room.host === socket.id });
+    io.to(roomId).emit('room_update', { roomId, host: room.host, players: room.players });
+    if (cb) cb({ ok: true, roomId });
   });
 
-  // invite: inviter sends targetName and roomId; server forwards to target socket
   socket.on('invite', ({ targetName }, cb) => {
-    const fromName = socket.data.name;
-    const roomId = socket.data.room; // inviter's room (if any)
-    const targetSocketId = nameToSocket[targetName];
-    if (!targetSocketId) {
-      return cb?.({ ok:false, error:'Joueur introuvable / hors-ligne' });
-    }
-    // send invitation request to target
-    io.to(targetSocketId).emit('invite_request', { fromName, roomId });
-    cb?.({ ok:true });
+    const target = nameToSocket[targetName];
+    if (!target) return cb ? cb({ ok: false, error: 'Joueur hors ligne' }) : null;
+    // find inviter's room
+    const roomId = Object.keys(socket.rooms).find(r => r !== socket.id);
+    io.to(target).emit('invite_request', { fromName: socket.data.name || '???', roomId });
+    if (cb) cb({ ok: true });
   });
 
-  // invite response: { fromName, roomId, accept }
   socket.on('invite_response', ({ fromName, roomId, accept }) => {
     const fromSocket = nameToSocket[fromName];
-    if (!fromSocket) return;
-    const responderName = socket.data.name || 'Unknown';
-    // notify inviter
-    io.to(fromSocket).emit('invite_response', { from: responderName, accept });
-    if (accept) {
-      // add invited player to room
-      if (!rooms[roomId]) {
-        // if room missing, inform
-        io.to(socket.id).emit('invite_result', { ok:false, error:'Salle plus disponible' });
-        return;
-      }
-      rooms[roomId].players[socket.id] = { name: responderName, color: socket.data.color || '#ff9966', x:0, z:0, angle:0, lives:3 };
+    if (fromSocket) io.to(fromSocket).emit('invite_response', { from: socket.data.name || '??', accept });
+    if (accept && rooms[roomId]) {
+      rooms[roomId].players[socket.id] = { name: socket.data.name || 'Invité', color: socket.data.color || '#ff9966', x:0, z:0, angle:0 };
       socket.join(roomId);
       socket.data.room = roomId;
-      // Broadcast updated room
-      io.to(roomId).emit('room_update', rooms[roomId]);
-      io.to(socket.id).emit('joined_room', { roomId });
+      io.to(roomId).emit('room_update', { roomId, host: rooms[roomId].host, players: rooms[roomId].players });
+      io.to(socket.id).emit('joined_room', { roomId, isHost: false });
     }
   });
 
-  // lobby chat (broadcast to room)
   socket.on('lobby_chat', ({ text }) => {
-    const roomId = socket.data.room;
+    const roomId = Object.keys(socket.rooms).find(r => r !== socket.id);
     if (!roomId) return;
     const name = socket.data.name || 'Invité';
     io.to(roomId).emit('lobby_chat', { name, text });
   });
 
-  // game chat (in-game)
-  socket.on('game_chat', ({ text }) => {
-    const roomId = socket.data.room;
-    if (!roomId) return;
-    const name = socket.data.name || 'Invité';
-    io.to(roomId).emit('game_chat', { name, text });
-  });
-
-  // start match (host)
-  socket.on('start_match', ({ aiCount }) => {
-    const roomId = socket.data.room;
-    if (!rooms[roomId]) return;
-    // spawn AI simple data to emit
-    const ia = [];
-    const needed = Math.max(0, (aiCount||4));
-    for (let i=0;i<needed;i++){
-      ia.push({ id: 'IA-'+Date.now()+Math.random().toString(36).slice(2,5), x: (Math.random()-0.5)*40, z: (Math.random()-0.5)*40, lives:3 });
-    }
-    io.to(roomId).emit('match_started', { IA: ia });
-  });
-
-  // player state updates (position, angle)
   socket.on('player_state', (state) => {
-    const roomId = socket.data.room;
-    if (!roomId || !rooms[roomId]) return;
-    if (!rooms[roomId].players[socket.id]) return;
-    // merge
-    rooms[roomId].players[socket.id] = { ...rooms[roomId].players[socket.id], ...state };
-    // broadcast (rate-limit in real app)
-    io.to(roomId).emit('room_update', rooms[roomId]);
+    const roomId = Object.keys(socket.rooms).find(r => r !== socket.id);
+    if (!roomId) return;
+    if (rooms[roomId] && rooms[roomId].players[socket.id]) {
+      rooms[roomId].players[socket.id] = { ...rooms[roomId].players[socket.id], ...state };
+      // broadcast
+      io.to(roomId).emit('room_update', { roomId, host: rooms[roomId].host, players: rooms[roomId].players });
+    }
   });
 
-  // fire: broadcast so others can create bullets locally
-  socket.on('fire', (data) => {
-    const roomId = socket.data.room;
+  socket.on('start_match', ({ aiCount }) => {
+    const roomId = Object.keys(socket.rooms).find(r => r !== socket.id);
     if (!roomId) return;
-    io.to(roomId).emit('fire', { shooter: socket.data.name || socket.id, ...data });
+    const room = rooms[roomId];
+    if (!room) return;
+    if (room.host !== socket.id) return; // only host
+    // prepare IA list
+    const IA = [];
+    for (let i = 0; i < (aiCount || 6); i++) {
+      IA.push({ id: `IA-${Date.now()}-${i}`, x: (Math.random()-0.5)*80, z: (Math.random()-0.5)*80, lives: 3 });
+    }
+    io.to(roomId).emit('match_started', { IA });
+  });
+
+  socket.on('fire', (data) => {
+    const roomId = Object.keys(socket.rooms).find(r => r !== socket.id);
+    if (!roomId) return;
+    io.to(roomId).emit('fire', { shooter: socket.data.name || socket.id, x: data.x, y: data.y, z: data.z, dir: data.dir });
+  });
+
+  socket.on('leave_room', (_, cb) => {
+    const roomId = Object.keys(socket.rooms).find(r => r !== socket.id);
+    if (!roomId) return cb?.();
+    const room = rooms[roomId];
+    if (room && room.players[socket.id]) {
+      const name = room.players[socket.id].name;
+      delete room.players[socket.id];
+      socket.leave(roomId);
+      io.to(roomId).emit('room_update', { roomId, host: room.host, players: room.players });
+      if (Object.keys(room.players).length === 0) delete rooms[roomId];
+    }
+    cb?.();
   });
 
   socket.on('disconnect', () => {
-    // clean up nameToSocket entries pointing to this socket
-    for (const name in nameToSocket) {
-      if (nameToSocket[name] === socket.id) delete nameToSocket[name];
-    }
-    // remove from room
+    // cleanup mapping
+    for (const name in nameToSocket) if (nameToSocket[name] === socket.id) delete nameToSocket[name];
+    // remove from rooms
     for (const roomId in rooms) {
-      const room = rooms[roomId];
-      if (room.players && room.players[socket.id]) {
-        delete room.players[socket.id];
-        io.to(roomId).emit('room_update', room);
-        // delete room if empty
-        if (Object.keys(room.players).length === 0) delete rooms[roomId];
+      if (rooms[roomId].players && rooms[roomId].players[socket.id]) {
+        const pname = rooms[roomId].players[socket.id].name;
+        delete rooms[roomId].players[socket.id];
+        io.to(roomId).emit('room_update', { roomId, host: rooms[roomId].host, players: rooms[roomId].players });
+        if (Object.keys(rooms[roomId].players).length === 0) delete rooms[roomId];
       }
     }
-    console.log('disconnect', socket.id);
   });
+
 });
 
 server.listen(PORT, () => console.log(`Server listening on http://localhost:${PORT}`));
