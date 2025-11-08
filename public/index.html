@@ -1,67 +1,78 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="utf-8"/>
-<title>Goat Battle Royale - Lobby & Chat</title>
-<style>
-  html,body{height:100%;margin:0;font-family:Arial,Helvetica,sans-serif;background:#87ceeb}
-  #canvas3d{position:absolute;inset:0;display:block}
-  #ui { position: absolute; left: 10px; top: 10px; width: 340px; z-index: 20; }
-  #menu, #lobby { background: rgba(0,0,0,0.6); color:#fff; padding:10px; border-radius:8px; margin-bottom:10px;}
-  input, select, button { padding:8px; margin:4px 0; width:100%; box-sizing:border-box; }
-  #lobbyPlayers { max-height:120px; overflow:auto; background: rgba(255,255,255,0.03); padding:6px; border-radius:6px; }
-  #chatBox { margin-top:8px; background: rgba(0,0,0,0.6); padding:8px; border-radius:8px; }
-  #lobbyChat, #gameChat { max-height:120px; overflow:auto; font-size:13px; color:#fff; padding:6px; background: rgba(0,0,0,0.1); border-radius:6px; }
-  .invite-notif { background:#222; color:#fff; padding:8px; margin-top:6px; border-radius:6px; }
-</style>
+  <meta charset="UTF-8" />
+  <title>Goat Battle Royale 3D</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    html,body{margin:0;height:100%;overflow:hidden;font-family:Inter,Arial;}
+    #canvas3d{position:fixed;inset:0;display:block;}
+    /* UI */
+    .overlay{position:fixed;z-index:20;left:12px;top:12px;width:340px}
+    #menu,#lobby,#endScreen{background:rgba(0,0,0,0.6);color:#fff;padding:12px;border-radius:8px}
+    input,select,button{width:100%;padding:8px;margin:6px 0;border-radius:6px;border:0;font-size:15px}
+    button{background:#ffd166;color:#000;font-weight:700;cursor:pointer}
+    #chat{position:fixed;right:12px;bottom:12px;width:320px;background:rgba(0,0,0,0.5);padding:8px;border-radius:8px;color:#fff;z-index:20}
+    #chatLog{height:180px;overflow:auto;font-size:13px;margin-bottom:8px}
+    #speedHUD{position:fixed;right:12px;top:12px;background:rgba(0,0,0,0.4);padding:8px;border-radius:6px;color:#fff;z-index:19}
+    #playersList{max-height:140px;overflow:auto;background:rgba(255,255,255,0.02);padding:6px;border-radius:6px;margin-bottom:8px}
+    #inviteBox{display:flex;gap:6px}
+    #inviteBox input{flex:1;width:auto}
+  </style>
 </head>
 <body>
-<canvas id="canvas3d"></canvas>
+  <canvas id="canvas3d"></canvas>
 
-<div id="ui">
-  <div id="menu">
-    <h2>Goat Battle Royale</h2>
-    <input id="pseudo" placeholder="Ton pseudo (unique)">
-    <input id="color" type="color" value="#ff9966">
-    <select id="controls"><option value="wasd">ZQSD / WASD</option><option value="arrows">Flèches</option></select>
+  <div class="overlay" id="menu">
+    <h2>🐐 Goat Battle Royale</h2>
+    <input id="pseudo" placeholder="Ton pseudo (unique)" />
+    <input id="color" type="color" value="#ff9966" />
+    <select id="controls">
+      <option value="zqsd">ZQSD</option>
+      <option value="wasd">WASD</option>
+      <option value="arrows">Flèches</option>
+    </select>
+    <select id="mode">
+      <option value="public">Public</option>
+      <option value="private">Privé</option>
+    </select>
     <button id="createRoomBtn">Créer une salle</button>
-    <input id="joinRoomId" placeholder="Saisir ID salle pour rejoindre (optionnel)">
+    <input id="joinRoomId" placeholder="Entrer ID pour rejoindre (optionnel)"/>
     <button id="joinRoomBtn">Rejoindre une salle</button>
   </div>
 
-  <div id="lobby" style="display:none;">
+  <div class="overlay" id="lobby" style="left:12px;top:12px;display:none">
     <h3>Lobby <span id="roomLabel"></span></h3>
-    <div id="lobbyPlayers"></div>
+    <div id="playersList"></div>
 
-    <input id="inviteName" placeholder="Pseudo de l'ami à inviter">
-    <button id="inviteBtn">Inviter</button>
-    <div id="pendingInvites"></div>
-
-    <div id="chatBox">
-      <h4>Chat Lobby</h4>
-      <div id="lobbyChat"></div>
-      <input id="lobbyChatInput" placeholder="Message lobby...">
-      <button id="sendLobbyChat">Envoyer</button>
+    <div id="inviteBox">
+      <input id="inviteName" placeholder="Pseudo ami à inviter" />
+      <button id="inviteBtn" style="width:120px">Inviter</button>
     </div>
 
-    <div id="chatBox">
-      <h4>Chat en jeu</h4>
-      <div id="gameChat"></div>
-      <input id="gameChatInput" placeholder="Message en jeu...">
-      <button id="sendGameChat">Envoyer</button>
+    <div style="margin-top:8px">
+      <button id="startGameBtn">Lancer la partie (host)</button>
+      <button id="leaveBtn" style="background:#ef476f;color:#fff">Quitter</button>
     </div>
-
-    <button id="startMatchBtn">Démarrer la partie (host)</button>
   </div>
 
-  <div id="invitePrompt" style="display:none;" class="invite-notif">
-    <div id="inviteText"></div>
-    <button id="acceptInvite">Accepter</button>
-    <button id="declineInvite">Refuser</button>
+  <div id="chat">
+    <div id="chatLog"></div>
+    <input id="chatInput" placeholder="Écrire..." />
   </div>
-</div>
 
-<script src="/socket.io/socket.io.js"></script>
-<script src="main.js"></script>
+  <div id="speedHUD">0 km/h</div>
+
+  <div id="endScreen" style="display:none;position:fixed;left:50%;top:40%;transform:translate(-50%,-50%);z-index:30;">
+    <div style="background:rgba(0,0,0,0.8);padding:20px;border-radius:8px">
+      <h2 id="endTitle">GAME OVER</h2>
+      <button id="backToMenu">Retour au menu</button>
+    </div>
+  </div>
+
+  <!-- libs (socket.io client served by server) and three.js from CDN -->
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <script src="main.js"></script>
 </body>
 </html>
