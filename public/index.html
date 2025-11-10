@@ -2,75 +2,433 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <title>Goat Battle Royale 3D</title>
+  <title>🐐 Goat Battle Royale 3D</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
-    html,body{margin:0;height:100%;overflow:hidden;font-family:Inter,Arial;}
-    #canvas3d{position:fixed;inset:0;display:block;}
-    /* UI */
-    .overlay{position:fixed;z-index:20;left:12px;top:12px;width:340px}
-    #menu,#lobby,#endScreen{background:rgba(0,0,0,0.6);color:#fff;padding:12px;border-radius:8px}
-    input,select,button{width:100%;padding:8px;margin:6px 0;border-radius:6px;border:0;font-size:15px}
-    button{background:#ffd166;color:#000;font-weight:700;cursor:pointer}
-    #chat{position:fixed;right:12px;bottom:12px;width:320px;background:rgba(0,0,0,0.5);padding:8px;border-radius:8px;color:#fff;z-index:20}
-    #chatLog{height:180px;overflow:auto;font-size:13px;margin-bottom:8px}
-    #speedHUD{position:fixed;right:12px;top:12px;background:rgba(0,0,0,0.4);padding:8px;border-radius:6px;color:#fff;z-index:19}
-    #playersList{max-height:140px;overflow:auto;background:rgba(255,255,255,0.02);padding:6px;border-radius:6px;margin-bottom:8px}
-    #inviteBox{display:flex;gap:6px}
-    #inviteBox input{flex:1;width:auto}
+    @import url('https://fonts.googleapis.com/css2?family=Bangers&family=Inter:wght@400;700&display=swap');
+    
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      font-family: 'Inter', Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    #canvas3d {
+      position: fixed;
+      inset: 0;
+      display: block;
+    }
+    
+    /* Menu principal stylé */
+    .overlay {
+      position: fixed;
+      z-index: 20;
+    }
+    
+    #menu {
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 440px;
+      background: linear-gradient(135deg, rgba(20,20,40,0.95) 0%, rgba(40,20,60,0.95) 100%);
+      color: #fff;
+      padding: 35px;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+      border: 2px solid rgba(255,255,255,0.1);
+      backdrop-filter: blur(10px);
+    }
+    
+    #menu h2 {
+      font-family: 'Bangers', cursive;
+      font-size: 42px;
+      text-align: center;
+      margin-bottom: 25px;
+      color: #ffd166;
+      text-shadow: 3px 3px 0 #ff6b6b, 6px 6px 20px rgba(0,0,0,0.5);
+      letter-spacing: 2px;
+    }
+    
+    .input-group {
+      margin-bottom: 18px;
+    }
+    
+    .input-group label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #ffd166;
+    }
+    
+    input, select {
+      width: 100%;
+      padding: 12px 15px;
+      border-radius: 10px;
+      border: 2px solid rgba(255,255,255,0.2);
+      font-size: 15px;
+      background: rgba(255,255,255,0.1);
+      color: #fff;
+      transition: all 0.3s;
+    }
+    
+    input:focus, select:focus {
+      outline: none;
+      border-color: #ffd166;
+      background: rgba(255,255,255,0.15);
+      box-shadow: 0 0 20px rgba(255,209,102,0.3);
+    }
+    
+    input::placeholder {
+      color: rgba(255,255,255,0.5);
+    }
+    
+    button {
+      width: 100%;
+      padding: 14px;
+      margin: 8px 0;
+      border-radius: 12px;
+      border: none;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    
+    #createRoomBtn {
+      background: linear-gradient(135deg, #ffd166 0%, #ff9f1c 100%);
+      color: #000;
+      box-shadow: 0 5px 20px rgba(255,209,102,0.4);
+    }
+    
+    #createRoomBtn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(255,209,102,0.6);
+    }
+    
+    #joinRoomBtn {
+      background: linear-gradient(135deg, #06ffa5 0%, #00d4aa 100%);
+      color: #000;
+      box-shadow: 0 5px 20px rgba(6,255,165,0.4);
+    }
+    
+    #joinRoomBtn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(6,255,165,0.6);
+    }
+    
+    .divider {
+      text-align: center;
+      color: rgba(255,255,255,0.5);
+      margin: 20px 0;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    
+    /* Lobby */
+    #lobby {
+      left: 20px;
+      top: 20px;
+      width: 380px;
+      background: rgba(20,20,40,0.92);
+      padding: 20px;
+      border-radius: 15px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+      border: 2px solid rgba(255,255,255,0.1);
+      backdrop-filter: blur(10px);
+      display: none;
+    }
+    
+    #lobby h3 {
+      font-family: 'Bangers', cursive;
+      color: #ffd166;
+      font-size: 26px;
+      margin-bottom: 15px;
+      text-shadow: 2px 2px 0 rgba(0,0,0,0.3);
+    }
+    
+    #roomLabel {
+      color: #06ffa5;
+      font-weight: 700;
+    }
+    
+    #playersList {
+      max-height: 160px;
+      overflow: auto;
+      background: rgba(255,255,255,0.05);
+      padding: 12px;
+      border-radius: 10px;
+      margin-bottom: 15px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    #playersList div {
+      padding: 8px;
+      margin: 4px 0;
+      background: rgba(255,255,255,0.08);
+      border-radius: 6px;
+      color: #fff;
+      font-size: 14px;
+    }
+    
+    #inviteBox {
+      display: flex;
+      gap: 8px;
+      margin: 12px 0;
+    }
+    
+    #inviteBox input {
+      flex: 1;
+    }
+    
+    #inviteBtn {
+      width: auto;
+      padding: 12px 20px;
+      background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+      color: #fff;
+      font-size: 14px;
+    }
+    
+    #startGameBtn {
+      background: linear-gradient(135deg, #06ffa5 0%, #00d4aa 100%);
+      color: #000;
+      margin-top: 10px;
+    }
+    
+    #leaveBtn {
+      background: linear-gradient(135deg, #ef476f 0%, #d32f4f 100%);
+      color: #fff;
+    }
+    
+    /* Chat */
+    #chat {
+      position: fixed;
+      right: 20px;
+      bottom: 20px;
+      width: 350px;
+      background: rgba(20,20,40,0.92);
+      padding: 15px;
+      border-radius: 12px;
+      color: #fff;
+      z-index: 20;
+      border: 2px solid rgba(255,255,255,0.1);
+      backdrop-filter: blur(10px);
+    }
+    
+    #chatLog {
+      height: 200px;
+      overflow: auto;
+      font-size: 13px;
+      margin-bottom: 10px;
+      padding: 10px;
+      background: rgba(0,0,0,0.3);
+      border-radius: 8px;
+    }
+    
+    #chatLog div {
+      margin: 5px 0;
+      line-height: 1.4;
+    }
+    
+    #chatLog b {
+      color: #ffd166;
+    }
+    
+    #chatInput {
+      width: 100%;
+      background: rgba(255,255,255,0.1);
+      border: 2px solid rgba(255,255,255,0.2);
+      color: #fff;
+      padding: 10px;
+      border-radius: 8px;
+    }
+    
+    /* HUD */
+    #speedHUD {
+      position: fixed;
+      right: 20px;
+      top: 20px;
+      background: rgba(20,20,40,0.85);
+      padding: 15px 20px;
+      border-radius: 10px;
+      color: #fff;
+      z-index: 19;
+      font-weight: 700;
+      font-size: 15px;
+      border: 2px solid rgba(255,209,102,0.3);
+      backdrop-filter: blur(10px);
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+    }
+    
+    /* End screen */
+    #endScreen {
+      display: none;
+      position: fixed;
+      left: 50%;
+      top: 40%;
+      transform: translate(-50%, -50%);
+      z-index: 30;
+    }
+    
+    #endScreen > div {
+      background: rgba(20,20,40,0.95);
+      padding: 40px;
+      border-radius: 20px;
+      text-align: center;
+      border: 3px solid #ffd166;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.7);
+    }
+    
+    #endTitle {
+      font-family: 'Bangers', cursive;
+      font-size: 48px;
+      color: #ff6b6b;
+      margin-bottom: 20px;
+      text-shadow: 3px 3px 0 rgba(0,0,0,0.5);
+    }
+    
+    #backToMenu {
+      background: linear-gradient(135deg, #ffd166 0%, #ff9f1c 100%);
+      color: #000;
+    }
+    
+    /* Scrollbar custom */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+    
+    ::-webkit-scrollbar-track {
+      background: rgba(255,255,255,0.05);
+      border-radius: 10px;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255,209,102,0.5);
+      border-radius: 10px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255,209,102,0.8);
+    }
+    
+    /* Animations */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    #menu, #lobby {
+      animation: fadeIn 0.5s ease;
+    }
+    
+    /* Info controls */
+    .controls-info {
+      background: rgba(255,255,255,0.05);
+      padding: 12px;
+      border-radius: 8px;
+      margin-top: 15px;
+      font-size: 12px;
+      line-height: 1.6;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    .controls-info strong {
+      color: #ffd166;
+    }
   </style>
 </head>
 <body>
   <canvas id="canvas3d"></canvas>
-
+  
+  <!-- Menu principal -->
   <div class="overlay" id="menu">
-    <h2>🐐 Goat Battle Royale</h2>
-    <input id="pseudo" placeholder="Ton pseudo (unique)" />
-    <input id="color" type="color" value="#ff9966" />
-    <select id="controls">
-      <option value="zqsd">ZQSD</option>
-      <option value="wasd">WASD</option>
-      <option value="arrows">Flèches</option>
-    </select>
-    <select id="mode">
-      <option value="public">Public</option>
-      <option value="private">Privé</option>
-    </select>
-    <button id="createRoomBtn">Créer une salle</button>
-    <input id="joinRoomId" placeholder="Entrer ID pour rejoindre (optionnel)"/>
-    <button id="joinRoomBtn">Rejoindre une salle</button>
+    <h2>🐐 GOAT BR</h2>
+    
+    <div class="input-group">
+      <label>Pseudo</label>
+      <input id="pseudo" placeholder="Entre ton pseudo unique" maxlength="20" />
+    </div>
+    
+    <div class="input-group">
+      <label>Couleur de ta chèvre</label>
+      <input id="color" type="color" value="#ff9966" />
+    </div>
+    
+    <div class="input-group">
+      <label>Contrôles</label>
+      <select id="controls">
+        <option value="zqsd">ZQSD (FR)</option>
+        <option value="wasd">WASD (EN)</option>
+        <option value="arrows">Flèches ←↑↓→</option>
+      </select>
+    </div>
+    
+    <div class="input-group">
+      <label>Mode</label>
+      <select id="mode">
+        <option value="public">Public</option>
+        <option value="private">Privé</option>
+      </select>
+    </div>
+    
+    <button id="createRoomBtn">🎮 Créer une salle</button>
+    
+    <div class="divider">OU</div>
+    
+    <div class="input-group">
+      <input id="joinRoomId" placeholder="Code de la salle (ex: ABC123)" />
+    </div>
+    <button id="joinRoomBtn">🚪 Rejoindre une salle</button>
+    
+    <div class="controls-info">
+      <strong>Contrôles :</strong><br>
+      • Déplacement : ZQSD/WASD/Flèches<br>
+      • Sprint : <strong>F</strong><br>
+      • Sauter : <strong>ESPACE</strong><br>
+      • Tirer : <strong>G</strong><br>
+      • Précision : <strong>Maintenir H</strong>
+    </div>
   </div>
-
-  <div class="overlay" id="lobby" style="left:12px;top:12px;display:none">
+  
+  <!-- Lobby -->
+  <div class="overlay" id="lobby">
     <h3>Lobby <span id="roomLabel"></span></h3>
     <div id="playersList"></div>
-
+    
     <div id="inviteBox">
-      <input id="inviteName" placeholder="Pseudo ami à inviter" />
-      <button id="inviteBtn" style="width:120px">Inviter</button>
+      <input id="inviteName" placeholder="Pseudo à inviter" />
+      <button id="inviteBtn">Inviter</button>
     </div>
-
-    <div style="margin-top:8px">
-      <button id="startGameBtn">Lancer la partie (host)</button>
-      <button id="leaveBtn" style="background:#ef476f;color:#fff">Quitter</button>
-    </div>
+    
+    <button id="startGameBtn">🚀 Lancer la partie</button>
+    <button id="leaveBtn">🚪 Quitter</button>
   </div>
-
+  
+  <!-- Chat -->
   <div id="chat">
     <div id="chatLog"></div>
-    <input id="chatInput" placeholder="Écrire..." />
+    <input id="chatInput" placeholder="Message (Entrée pour envoyer)..." />
   </div>
-
-  <div id="speedHUD">0 km/h</div>
-
-  <div id="endScreen" style="display:none;position:fixed;left:50%;top:40%;transform:translate(-50%,-50%);z-index:30;">
-    <div style="background:rgba(0,0,0,0.8);padding:20px;border-radius:8px">
+  
+  <!-- HUD vitesse -->
+  <div id="speedHUD">0 km/h | HP: 3/3 | Kills: 0 | Stamina: 100%</div>
+  
+  <!-- Écran de fin -->
+  <div id="endScreen">
+    <div>
       <h2 id="endTitle">GAME OVER</h2>
       <button id="backToMenu">Retour au menu</button>
     </div>
   </div>
-
-  <!-- libs (socket.io client served by server) and three.js from CDN -->
+  
+  <!-- Scripts -->
   <script src="/socket.io/socket.io.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
   <script src="main.js"></script>
