@@ -81,9 +81,20 @@ const MAP_SIZE = 600; // Grand enclos carré
 const SPAWN_AREA = 150; // Zone spawn 150x150
 
 const weaponStats = {
-  pistol: { damage: 20, fireRate: 300, reloadTime: 1000, magSize: 12, auto: false, speed: 3 },
+  pistol: { damage: 20, fireRate: 300, reloadTime: 800, magSize: 6, auto: false, speed: 3 },
   ak47: { damage: 20, fireRate: 100, reloadTime: 2000, magSize: 30, auto: true, speed: 2.5 },
-  sniper: { damageBody: 30, damageHead: 80, fireRate: 1500, reloadTime: 2500, magSize: 5, auto: false, speed: 4 }
+  sniper: { damageBody: 30, damageHead: 80, fireRate: 1500, reloadTime: 2000, magSize: 1, auto: false, speed: 4 }
+};
+
+// Mobile controls
+let isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+let touchControls = {
+  moveX: 0,
+  moveY: 0,
+  shoot: false,
+  aim: false,
+  jump: false,
+  reload: false
 };
 
 // Audio
