@@ -39,6 +39,7 @@
       flex-direction: column;
       justify-content: center;
       border-right: 1px solid rgba(255,255,255,0.1);
+      overflow-y: auto;
     }
     
     #menu .right-panel {
@@ -164,6 +165,96 @@
       letter-spacing: 2px;
     }
     
+    /* Settings button */
+    .settings-btn {
+      position: absolute;
+      top: 30px;
+      right: 30px;
+      background: transparent;
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.3);
+      padding: 12px 20px;
+      cursor: pointer;
+      font-size: 11px;
+      width: auto;
+    }
+    
+    .settings-btn:hover {
+      background: rgba(255,255,255,0.1);
+      border-color: #fff;
+    }
+    
+    #settingsModal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.9);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    #settingsModal.active {
+      display: flex;
+    }
+    
+    .settings-content {
+      background: #1a1a1a;
+      border: 1px solid rgba(255,255,255,0.2);
+      padding: 40px;
+      max-width: 600px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+    
+    .settings-content h2 {
+      color: #fff;
+      font-size: 32px;
+      margin-bottom: 30px;
+      font-weight: 700;
+    }
+    
+    .setting-item {
+      margin: 20px 0;
+      padding: 15px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    .setting-item label {
+      display: flex;
+      align-items: center;
+      color: #fff;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    
+    .setting-item input[type="checkbox"] {
+      width: auto;
+      margin-right: 15px;
+      cursor: pointer;
+    }
+    
+    .controls-info {
+      background: rgba(255,255,255,0.03);
+      padding: 20px;
+      margin-top: 20px;
+      font-size: 11px;
+      line-height: 1.8;
+      border: 1px solid rgba(255,255,255,0.1);
+      color: #888;
+    }
+    
+    .controls-info strong {
+      color: #fff;
+    }
+    
+    .close-settings {
+      background: #fff;
+      color: #000;
+      margin-top: 30px;
+    }
+    
     /* Lobby minimaliste */
     #lobby {
       position: fixed;
@@ -234,7 +325,7 @@
       margin-top: 15px;
     }
     
-    #leaveBtn {
+    #leaveBtn, #backToLobbyBtn {
       background: transparent;
       color: #fff;
       border: 1px solid #fff;
@@ -318,6 +409,97 @@
       letter-spacing: 2px;
     }
     
+    /* Mobile controls */
+    .mobile-controls {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 15;
+      pointer-events: none;
+    }
+    
+    .mobile-controls.active {
+      display: block;
+    }
+    
+    .joystick-container {
+      position: absolute;
+      left: 50px;
+      bottom: 50px;
+      width: 150px;
+      height: 150px;
+      pointer-events: all;
+    }
+    
+    .joystick-bg {
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+      border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 50%;
+      position: relative;
+    }
+    
+    .joystick-stick {
+      width: 60px;
+      height: 60px;
+      background: rgba(255,255,255,0.8);
+      border-radius: 50%;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      transition: all 0.1s;
+    }
+    
+    .mobile-btn {
+      position: absolute;
+      background: rgba(255,255,255,0.2);
+      border: 2px solid rgba(255,255,255,0.5);
+      border-radius: 50%;
+      color: #fff;
+      font-size: 20px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: all;
+      user-select: none;
+    }
+    
+    .mobile-btn:active {
+      background: rgba(255,255,255,0.4);
+    }
+    
+    .btn-shoot {
+      right: 50px;
+      bottom: 80px;
+      width: 80px;
+      height: 80px;
+    }
+    
+    .btn-aim {
+      right: 150px;
+      bottom: 50px;
+      width: 70px;
+      height: 70px;
+    }
+    
+    .btn-jump {
+      right: 50px;
+      bottom: 180px;
+      width: 60px;
+      height: 60px;
+    }
+    
+    .btn-reload {
+      right: 140px;
+      bottom: 160px;
+      width: 55px;
+      height: 55px;
+      font-size: 16px;
+    }
+    
     /* Crosshair */
     #crosshair {
       position: fixed;
@@ -369,6 +551,7 @@
       display: none;
       z-index: 24;
       pointer-events: none;
+      background: transparent;
     }
     
     #sniperScope.active {
@@ -378,7 +561,7 @@
     #sniperScope .overlay {
       position: absolute;
       inset: 0;
-      background: rgba(0,0,0,0.7);
+      background: transparent;
     }
     
     #sniperScope .scope-circle {
@@ -391,6 +574,7 @@
       border-radius: 50%;
       transform: translate(-50%, -50%);
       box-shadow: 0 0 0 9999px rgba(0,0,0,0.9);
+      background: transparent;
     }
     
     #sniperScope .scope-line-h,
@@ -426,13 +610,6 @@
       transform: translate(-50%, -50%);
     }
     
-    #sniperScope .scope-marks {
-      position: absolute;
-      left: 50%;
-      top: 50%;
-      transform: translate(-50%, -50%);
-    }
-    
     /* Damage indicators */
     .damage-indicator {
       position: fixed;
@@ -459,10 +636,15 @@
     #endScreen {
       display: none;
       position: fixed;
-      left: 50%;
-      top: 40%;
-      transform: translate(-50%, -50%);
+      inset: 0;
+      background: rgba(0,0,0,0.95);
       z-index: 30;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    #endScreen.active {
+      display: flex;
     }
     
     #endScreen > div {
@@ -470,6 +652,8 @@
       padding: 50px;
       border: 1px solid #fff;
       text-align: center;
+      max-width: 600px;
+      width: 90%;
     }
     
     #endTitle {
@@ -480,7 +664,28 @@
       letter-spacing: 2px;
     }
     
-    #backToMenu {
+    #statsTable {
+      width: 100%;
+      margin: 30px 0;
+      color: #fff;
+      border-collapse: collapse;
+    }
+    
+    #statsTable th, #statsTable td {
+      padding: 15px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    #statsTable th {
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: #888;
+    }
+    
+    #backToMenu, #backToLobbyBtn {
       background: #fff;
       color: #000;
     }
@@ -506,18 +711,20 @@
       animation: fadeIn 0.3s ease;
     }
     
-    .controls-info {
-      background: rgba(255,255,255,0.03);
-      padding: 20px;
-      margin-top: 30px;
-      font-size: 11px;
-      line-height: 1.8;
-      border: 1px solid rgba(255,255,255,0.1);
-      color: #888;
-    }
-    
-    .controls-info strong {
-      color: #fff;
+    @media (max-width: 768px) {
+      #menu {
+        flex-direction: column;
+      }
+      
+      #menu .right-panel {
+        width: 100%;
+        height: 200px;
+      }
+      
+      #menu .left-panel {
+        border-right: none;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+      }
     }
   </style>
 </head>
@@ -526,6 +733,8 @@
   
   <!-- Menu professionnel -->
   <div id="menu">
+    <button class="settings-btn" id="openSettings">⚙ SETTINGS</button>
+    
     <div class="left-panel">
       <h1>GOAT BR</h1>
       <div class="subtitle">BATTLE ROYALE SIMULATOR</div>
@@ -547,15 +756,7 @@
             <option value="zqsd">ZQSD (FR)</option>
             <option value="wasd">WASD (EN)</option>
             <option value="arrows">Arrows</option>
-          </select>
-        </div>
-        
-        <div class="input-group">
-          <label>Engine Sound</label>
-          <select id="engineSound">
-            <option value="sport">Sport Engine</option>
-            <option value="diesel">Diesel Engine</option>
-            <option value="electric">Electric Motor</option>
+            <option value="mobile">Mobile Touch</option>
           </select>
         </div>
         
@@ -575,20 +776,60 @@
           <input id="joinRoomId" placeholder="Room Code (e.g. ABC123)" />
         </div>
         <button id="joinRoomBtn">Join Room</button>
-        
-        <div class="controls-info">
-          <strong>CONTROLS:</strong><br>
-          Movement: ZQSD/WASD/Arrows | Sprint: <strong>Shift</strong><br>
-          Jump: <strong>V</strong> | Crouch: <strong>Ctrl</strong><br>
-          Shoot: <strong>E or Space</strong> | Aim: <strong>Hold H or C</strong><br>
-          Reload: <strong>R</strong> | Switch Weapon: <strong>1, 2, 3</strong>
-        </div>
       </div>
     </div>
     
     <div class="right-panel">
       <canvas id="goatPreview"></canvas>
     </div>
+  </div>
+  
+  <!-- Settings Modal -->
+  <div id="settingsModal">
+    <div class="settings-content">
+      <h2>SETTINGS</h2>
+      
+      <div class="setting-item">
+        <label>
+          <input type="checkbox" id="soundEnabled" checked>
+          Enable Sound Effects
+        </label>
+      </div>
+      
+      <div class="setting-item">
+        <label>
+          <input type="checkbox" id="motorSoundEnabled" checked>
+          Enable Motor Sound
+        </label>
+      </div>
+      
+      <div class="controls-info">
+        <strong>CONTROLS:</strong><br>
+        <strong>Movement:</strong> ZQSD/WASD/Arrows or Touch Joystick<br>
+        <strong>Sprint:</strong> Shift<br>
+        <strong>Jump:</strong> V<br>
+        <strong>Crouch:</strong> Ctrl<br>
+        <strong>Shoot:</strong> E or Space (or Touch Button)<br>
+        <strong>Aim:</strong> Hold H or C<br>
+        <strong>Reload:</strong> R (Auto-reload enabled)<br>
+        <strong>Switch Weapon:</strong> 1 (Pistol), 2 (AK-47), 3 (Sniper)
+      </div>
+      
+      <button class="close-settings" id="closeSettings">Close</button>
+    </div>
+  </div>
+  
+  <!-- Mobile controls -->
+  <div class="mobile-controls" id="mobileControls">
+    <div class="joystick-container" id="joystickContainer">
+      <div class="joystick-bg">
+        <div class="joystick-stick" id="joystickStick"></div>
+      </div>
+    </div>
+    <div class="mobile-btn btn-shoot" id="mobileShoot">FIRE</div>
+    <div class="mobile-btn btn-aim" id="mobileAim">AIM</div>
+    <div class="mobile-btn btn-jump" id="mobileJump">J</div>
+    <div class="mobile-btn btn-reload" id="mobileReload">R</div>
   </div>
   
   <!-- Lobby -->
@@ -614,7 +855,7 @@
   <!-- HUD -->
   <div id="speedHUD">0 km/h | HP: 100% | Kills: 0</div>
   <div id="weaponHUD">PISTOL | ∞</div>
-  <div id="timerHUD">0:00</div>
+  <div id="timerHUD">5:00</div>
   
   <!-- Crosshair -->
   <div id="crosshair">
@@ -633,13 +874,63 @@
   <!-- End Screen -->
   <div id="endScreen">
     <div>
-      <h2 id="endTitle">GAME OVER</h2>
+      <h2 id="endTitle">MATCH ENDED</h2>
+      <table id="statsTable">
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>Player</th>
+            <th>Kills</th>
+            <th>Deaths</th>
+          </tr>
+        </thead>
+        <tbody id="statsBody"></tbody>
+      </table>
+      <button id="backToLobbyBtn">Back to Lobby</button>
       <button id="backToMenu">Back to Menu</button>
     </div>
   </div>
   
   <script src="/socket.io/socket.io.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
-  <script src="main.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.3/howler.min.js"></script>
+  <script>
+    // Note: This is a demo version. For full functionality, you need:
+    // 1. A Node.js server running the provided server.js
+    // 2. The server.js file in your project root
+    // 3. Run: npm install express socket.io
+    // 4. Run: npm start
+    
+    // This demo will work for UI/controls testing but multiplayer features require the server
+    
+    const socket = typeof io !== 'undefined' ? io() : { 
+      on: () => {}, 
+      emit: () => {}, 
+      id: 'demo-' + Math.random() 
+    };
+    
+    // UI refs
+    const menu = document.getElementById('menu');
+    const goatPreview = document.getElementById('goatPreview');
+    const lobbyUi = document.getElementById('lobby');
+    const chatLog = document.getElementById('chatLog');
+    const chatInput = document.getElementById('chatInput');
+    const settingsModal = document.getElementById('settingsModal');
+    const openSettings = document.getElementById('openSettings');
+    const closeSettings = document.getElementById('closeSettings');
+    const soundEnabled = document.getElementById('soundEnabled');
+    const motorSoundEnabled = document.getElementById('motorSoundEnabled');
+    const mobileControls = document.getElementById('mobileControls');
+    
+    // Settings
+    openSettings.onclick = () => settingsModal.classList.add('active');
+    closeSettings.onclick = () => settingsModal.classList.remove('active');
+    
+    // Mobile detection
+    let isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
+    console.log('GOAT Battle Royale - Demo Mode');
+    console.log('Connect to server for multiplayer features');
+  </script>
 </body>
 </html>
