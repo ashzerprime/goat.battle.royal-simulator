@@ -15,9 +15,16 @@
    - Validation pseudos (anti-NSFW/nazi/raciste)
    - Scope sniper sans zone sombre
    - Options son dans settings
+   - Three.js ES6 modules (fix deprecated warning)
+   - Socket.io avec reconnection automatique
 */
 
-const socket = typeof io !== 'undefined' ? io() : { on: ()=>{}, emit: ()=>{}, id: 'demo' };
+// Attendre que socket soit disponible
+let socket = window.socket;
+if (!socket) {
+  console.error('Socket.io not initialized!');
+  alert('Server connection failed. Please refresh the page.');
+}
 
 // UI
 const createRoomBtn = document.getElementById('createRoomBtn');
