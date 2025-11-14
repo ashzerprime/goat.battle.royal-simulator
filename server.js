@@ -1,4 +1,4 @@
-// server.js (CommonJS) - VERSION CORRIGÉE
+// server.js - VERSION RAILWAY OPTIMISÉE
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -10,10 +10,25 @@ const io = new Server(server, {
   cors: {
     origin: "*",
     methods: ["GET", "POST"]
-  }
+  },
+  transports: ['websocket', 'polling'],
+  allowEIO3: true,
+  pingTimeout: 60000,
+  pingInterval: 25000
 });
 
+// Serve static files
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Health check endpoint for Railway
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Root endpoint
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
 const PORT = process.env.PORT || 3000;
 
@@ -257,6 +272,12 @@ io.on('connection', (socket) => {
     });
   });
 
+  socket.on('end_match', () => {
+    const roomId = socket.data.roomId;
+    if (!roomId) return;
+    endMatch(roomId);
+  });
+
   socket.on('leave_room', (_, cb) => {
     const roomId = socket.data.roomId;
     if (!roomId) return cb?.();
@@ -332,19 +353,30 @@ function endMatch(roomId) {
   });
 }
 
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`
 🐐 ========================================
    GOAT BATTLE ROYALE SERVEUR DÉMARRÉ
-   http://localhost:${PORT}
+   Port: ${PORT}
+   Environnement: ${process.env.NODE_ENV || 'development'}
+   Railway: ${process.env.RAILWAY_ENVIRONMENT || 'local'}
 ========================================
   `);
 });
 
+// Gestion des erreurs
 process.on('uncaughtException', (err) => {
   console.error('💥 Erreur non gérée:', err);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
   console.error('💥 Promesse rejetée:', reason);
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM signal received: closing HTTP server');
+  server.close(() => {
+    console.log('HTTP server closed');
+  });
 });
