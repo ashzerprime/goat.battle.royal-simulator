@@ -4,8 +4,7 @@
 
 // Récupérer THREE et socket depuis window
 const THREE = window.THREE;
-const socket = window.socket;
-
+const socket = window.socket || io();
 if (!THREE) {
   console.error('THREE.js not loaded!');
 }
