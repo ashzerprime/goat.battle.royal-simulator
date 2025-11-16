@@ -32,6 +32,104 @@
       overflow: hidden;
     }
     
+    /* Settings button */
+    .settings-btn {
+      position: absolute;
+      top: 30px;
+      right: 30px;
+      background: transparent;
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.3);
+      padding: 12px 20px;
+      cursor: pointer;
+      font-size: 11px;
+      width: auto;
+      z-index: 51;
+      transition: all 0.2s;
+      border-radius: 2px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      font-family: 'Roboto', sans-serif;
+      font-weight: 700;
+    }
+    
+    .settings-btn:hover {
+      background: rgba(255,255,255,0.1);
+      border-color: #fff;
+      transform: translateY(-1px);
+    }
+    
+    #settingsModal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.95);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    #settingsModal.active {
+      display: flex;
+    }
+    
+    .settings-content {
+      background: #1a1a1a;
+      border: 1px solid rgba(255,255,255,0.2);
+      padding: 40px;
+      max-width: 600px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+    
+    .settings-content h2 {
+      color: #fff;
+      font-size: 32px;
+      margin-bottom: 30px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+    
+    .setting-item {
+      margin: 20px 0;
+      padding: 15px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    .setting-item label {
+      display: flex;
+      align-items: center;
+      color: #fff;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    
+    .setting-item input[type="checkbox"] {
+      width: auto;
+      margin-right: 15px;
+      cursor: pointer;
+    }
+    
+    .close-settings {
+      background: #fff;
+      color: #000;
+      margin-top: 30px;
+      width: 100%;
+      padding: 16px;
+      border: none;
+      cursor: pointer;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      font-family: 'Roboto', sans-serif;
+    }
+    
+    .close-settings:hover {
+      background: #f0f0f0;
+    }
+    
     #menu .left-panel {
       flex: 1;
       padding: 60px;
@@ -165,80 +263,10 @@
       letter-spacing: 2px;
     }
     
-    /* Settings button */
-    .settings-btn {
-      position: absolute;
-      top: 30px;
-      right: 30px;
-      background: transparent;
-      color: #fff;
-      border: 1px solid rgba(255,255,255,0.3);
-      padding: 12px 20px;
-      cursor: pointer;
-      font-size: 11px;
-      width: auto;
-    }
-    
-    .settings-btn:hover {
-      background: rgba(255,255,255,0.1);
-      border-color: #fff;
-    }
-    
-    #settingsModal {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.9);
-      z-index: 100;
-      align-items: center;
-      justify-content: center;
-    }
-    
-    #settingsModal.active {
-      display: flex;
-    }
-    
-    .settings-content {
-      background: #1a1a1a;
-      border: 1px solid rgba(255,255,255,0.2);
-      padding: 40px;
-      max-width: 600px;
-      width: 90%;
-      max-height: 80vh;
-      overflow-y: auto;
-    }
-    
-    .settings-content h2 {
-      color: #fff;
-      font-size: 32px;
-      margin-bottom: 30px;
-      font-weight: 700;
-    }
-    
-    .setting-item {
-      margin: 20px 0;
-      padding: 15px 0;
-      border-bottom: 1px solid rgba(255,255,255,0.1);
-    }
-    
-    .setting-item label {
-      display: flex;
-      align-items: center;
-      color: #fff;
-      font-size: 14px;
-      cursor: pointer;
-    }
-    
-    .setting-item input[type="checkbox"] {
-      width: auto;
-      margin-right: 15px;
-      cursor: pointer;
-    }
-    
     .controls-info {
       background: rgba(255,255,255,0.03);
       padding: 20px;
-      margin-top: 20px;
+      margin-top: 30px;
       font-size: 11px;
       line-height: 1.8;
       border: 1px solid rgba(255,255,255,0.1);
@@ -247,12 +275,6 @@
     
     .controls-info strong {
       color: #fff;
-    }
-    
-    .close-settings {
-      background: #fff;
-      color: #000;
-      margin-top: 30px;
     }
     
     /* Lobby minimaliste */
@@ -558,12 +580,6 @@
       display: block;
     }
     
-    #sniperScope .overlay {
-      position: absolute;
-      inset: 0;
-      background: transparent;
-    }
-    
     #sniperScope .scope-circle {
       position: absolute;
       left: 50%;
@@ -725,6 +741,12 @@
         border-right: none;
         border-bottom: 1px solid rgba(255,255,255,0.1);
       }
+      
+      .settings-btn {
+        top: 10px;
+        right: 10px;
+        padding: 10px 15px;
+      }
     }
   </style>
 </head>
@@ -776,6 +798,14 @@
           <input id="joinRoomId" placeholder="Room Code (e.g. ABC123)" />
         </div>
         <button id="joinRoomBtn">Join Room</button>
+        
+        <div class="controls-info">
+          <strong>CONTROLS:</strong><br>
+          Movement: ZQSD/WASD/Arrows | Sprint: <strong>Shift</strong><br>
+          Jump: <strong>V</strong> | Crouch: <strong>Ctrl</strong><br>
+          Shoot: <strong>E or Space</strong> | Aim: <strong>Hold H or C</strong><br>
+          Reload: <strong>R</strong> (Auto) | Switch: <strong>1, 2, 3</strong>
+        </div>
       </div>
     </div>
     
@@ -787,7 +817,7 @@
   <!-- Settings Modal -->
   <div id="settingsModal">
     <div class="settings-content">
-      <h2>SETTINGS</h2>
+      <h2>Settings</h2>
       
       <div class="setting-item">
         <label>
@@ -804,15 +834,19 @@
       </div>
       
       <div class="controls-info">
-        <strong>CONTROLS:</strong><br>
-        <strong>Movement:</strong> ZQSD/WASD/Arrows or Touch Joystick<br>
+        <strong>FULL CONTROLS GUIDE:</strong><br><br>
+        <strong>Movement:</strong> ZQSD / WASD / Arrows / Touch Joystick<br>
         <strong>Sprint:</strong> Shift<br>
         <strong>Jump:</strong> V<br>
         <strong>Crouch:</strong> Ctrl<br>
-        <strong>Shoot:</strong> E or Space (or Touch Button)<br>
+        <strong>Shoot:</strong> E or Space<br>
         <strong>Aim:</strong> Hold H or C<br>
-        <strong>Reload:</strong> R (Auto-reload enabled)<br>
-        <strong>Switch Weapon:</strong> 1 (Pistol), 2 (AK-47), 3 (Sniper)
+        <strong>Reload:</strong> R (automatic when empty)<br>
+        <strong>Switch Weapon:</strong> 1 (Pistol), 2 (AK-47), 3 (Sniper)<br><br>
+        <strong>WEAPONS:</strong><br>
+        • Pistol: -20% damage, infinite ammo<br>
+        • AK-47: -15% damage, 30 bullets, auto-fire<br>
+        • Sniper: -30% body / -80% headshot, 1 bullet
       </div>
       
       <button class="close-settings" id="closeSettings">Close</button>
@@ -864,7 +898,6 @@
   
   <!-- Sniper Scope -->
   <div id="sniperScope">
-    <div class="overlay"></div>
     <div class="scope-circle"></div>
     <div class="scope-line-h"></div>
     <div class="scope-line-v"></div>
@@ -892,45 +925,39 @@
   </div>
   
   <script src="/socket.io/socket.io.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.3/howler.min.js"></script>
-  <script>
-    // Note: This is a demo version. For full functionality, you need:
-    // 1. A Node.js server running the provided server.js
-    // 2. The server.js file in your project root
-    // 3. Run: npm install express socket.io
-    // 4. Run: npm start
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+      }
+    }
+  </script>
+  <script type="module">
+    import * as THREE from 'three';
+    window.THREE = THREE;
     
-    // This demo will work for UI/controls testing but multiplayer features require the server
+    // Initialiser Socket.io
+    window.socket = io({
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      reconnectionAttempts: 10,
+      transports: ['websocket', 'polling']
+    });
     
-    const socket = typeof io !== 'undefined' ? io() : { 
-      on: () => {}, 
-      emit: () => {}, 
-      id: 'demo-' + Math.random() 
-    };
+    window.socket.on('connect', () => {
+      console.log('✅ Connecté au serveur:', window.socket.id);
+    });
     
-    // UI refs
-    const menu = document.getElementById('menu');
-    const goatPreview = document.getElementById('goatPreview');
-    const lobbyUi = document.getElementById('lobby');
-    const chatLog = document.getElementById('chatLog');
-    const chatInput = document.getElementById('chatInput');
-    const settingsModal = document.getElementById('settingsModal');
-    const openSettings = document.getElementById('openSettings');
-    const closeSettings = document.getElementById('closeSettings');
-    const soundEnabled = document.getElementById('soundEnabled');
-    const motorSoundEnabled = document.getElementById('motorSoundEnabled');
-    const mobileControls = document.getElementById('mobileControls');
+    window.socket.on('connect_error', (error) => {
+      console.error('❌ Erreur de connexion:', error);
+    });
     
-    // Settings
-    openSettings.onclick = () => settingsModal.classList.add('active');
-    closeSettings.onclick = () => settingsModal.classList.remove('active');
-    
-    // Mobile detection
-    let isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    
-    console.log('GOAT Battle Royale - Demo Mode');
-    console.log('Connect to server for multiplayer features');
+    // Charger le script main.js
+    const script = document.createElement('script');
+    script.type = 'module';
+    script.src = 'main.js';
+    document.body.appendChild(script);
   </script>
 </body>
 </html>
