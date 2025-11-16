@@ -1,969 +1,954 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <title>GOAT Battle Royale SIMULATOR</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700;900&display=swap');
-    
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    
-    html, body {
-      height: 100%;
-      overflow: hidden;
-      font-family: 'Roboto', sans-serif;
-      background: #0a0a0a;
-    }
-    
-    #canvas3d {
-      position: fixed;
-      inset: 0;
-      display: block;
-    }
-    
-    /* Menu professionnel noir & blanc */
-    #menu {
-      position: fixed;
-      inset: 0;
-      background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
-      z-index: 50;
-      display: flex;
-      overflow: hidden;
-    }
-    
-    /* Settings button */
-    .settings-btn {
-      position: absolute;
-      top: 30px;
-      right: 30px;
-      background: transparent;
-      color: #fff;
-      border: 1px solid rgba(255,255,255,0.3);
-      padding: 12px 20px;
-      cursor: pointer;
-      font-size: 11px;
-      width: auto;
-      z-index: 51;
-      transition: all 0.2s;
-      border-radius: 2px;
-      text-transform: uppercase;
-      letter-spacing: 2px;
-      font-family: 'Roboto', sans-serif;
-      font-weight: 700;
-    }
-    
-    .settings-btn:hover {
-      background: rgba(255,255,255,0.1);
-      border-color: #fff;
-      transform: translateY(-1px);
-    }
-    
-    #settingsModal {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.95);
-      z-index: 100;
-      align-items: center;
-      justify-content: center;
-    }
-    
-    #settingsModal.active {
-      display: flex;
-    }
-    
-    .settings-content {
-      background: #1a1a1a;
-      border: 1px solid rgba(255,255,255,0.2);
-      padding: 40px;
-      max-width: 600px;
-      width: 90%;
-      max-height: 80vh;
-      overflow-y: auto;
-    }
-    
-    .settings-content h2 {
-      color: #fff;
-      font-size: 32px;
-      margin-bottom: 30px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 2px;
-    }
-    
-    .setting-item {
-      margin: 20px 0;
-      padding: 15px 0;
-      border-bottom: 1px solid rgba(255,255,255,0.1);
-    }
-    
-    .setting-item label {
-      display: flex;
-      align-items: center;
-      color: #fff;
-      font-size: 14px;
-      cursor: pointer;
-    }
-    
-    .setting-item input[type="checkbox"] {
-      width: auto;
-      margin-right: 15px;
-      cursor: pointer;
-    }
-    
-    .close-settings {
-      background: #fff;
-      color: #000;
-      margin-top: 30px;
-      width: 100%;
-      padding: 16px;
-      border: none;
-      cursor: pointer;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 2px;
-      font-family: 'Roboto', sans-serif;
-    }
-    
-    .close-settings:hover {
-      background: #f0f0f0;
-    }
-    
-    #menu .left-panel {
-      flex: 1;
-      padding: 60px;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      border-right: 1px solid rgba(255,255,255,0.1);
-      overflow-y: auto;
-    }
-    
-    #menu .right-panel {
-      width: 500px;
-      background: #000;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      position: relative;
-      overflow: hidden;
-    }
-    
-    #menu .right-panel::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: radial-gradient(circle at center, rgba(255,255,255,0.05) 0%, transparent 70%);
-    }
-    
-    #goatPreview {
-      width: 100%;
-      height: 100%;
-    }
-    
-    #menu h1 {
-      font-size: 72px;
-      font-weight: 900;
-      color: #fff;
-      margin-bottom: 10px;
-      letter-spacing: -2px;
-      text-transform: uppercase;
-    }
-    
-    #menu .subtitle {
-      font-size: 18px;
-      color: #888;
-      font-weight: 300;
-      margin-bottom: 50px;
-      letter-spacing: 3px;
-    }
-    
-    .form-section {
-      max-width: 500px;
-    }
-    
-    .input-group {
-      margin-bottom: 24px;
-    }
-    
-    .input-group label {
-      display: block;
-      margin-bottom: 8px;
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 2px;
-      color: #aaa;
-    }
-    
-    input, select {
-      width: 100%;
-      padding: 14px 18px;
-      border-radius: 2px;
-      border: 1px solid rgba(255,255,255,0.15);
-      font-size: 15px;
-      background: rgba(255,255,255,0.05);
-      color: #fff;
-      transition: all 0.2s;
-      font-family: 'Roboto', sans-serif;
-    }
-    
-    input:focus, select:focus {
-      outline: none;
-      border-color: #fff;
-      background: rgba(255,255,255,0.08);
-    }
-    
-    input::placeholder {
-      color: rgba(255,255,255,0.3);
-    }
-    
-    button {
-      width: 100%;
-      padding: 16px;
-      margin: 10px 0;
-      border-radius: 2px;
-      border: none;
-      font-size: 13px;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all 0.2s;
-      text-transform: uppercase;
-      letter-spacing: 2px;
-      font-family: 'Roboto', sans-serif;
-    }
-    
-    #createRoomBtn {
-      background: #fff;
-      color: #000;
-    }
-    
-    #createRoomBtn:hover {
-      background: #f0f0f0;
-      transform: translateY(-1px);
-    }
-    
-    #joinRoomBtn {
-      background: transparent;
-      color: #fff;
-      border: 1px solid #fff;
-    }
-    
-    #joinRoomBtn:hover {
-      background: rgba(255,255,255,0.1);
-    }
-    
-    .divider {
-      text-align: center;
-      color: #555;
-      margin: 30px 0;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 2px;
-    }
-    
-    .controls-info {
-      background: rgba(255,255,255,0.03);
-      padding: 20px;
-      margin-top: 30px;
-      font-size: 11px;
-      line-height: 1.8;
-      border: 1px solid rgba(255,255,255,0.1);
-      color: #888;
-    }
-    
-    .controls-info strong {
-      color: #fff;
-    }
-    
-    /* Lobby minimaliste */
-    #lobby {
-      position: fixed;
-      left: 30px;
-      top: 30px;
-      width: 350px;
-      background: rgba(0,0,0,0.85);
-      padding: 25px;
-      border-radius: 0;
-      border: 1px solid rgba(255,255,255,0.2);
-      backdrop-filter: blur(20px);
-      display: none;
-    }
-    
-    #lobby h3 {
-      color: #fff;
-      font-size: 20px;
-      margin-bottom: 20px;
-      font-weight: 700;
-      letter-spacing: 1px;
-    }
-    
-    #roomLabel {
-      color: #888;
-      font-weight: 400;
-    }
-    
-    #playersList {
-      max-height: 180px;
-      overflow: auto;
-      background: rgba(255,255,255,0.03);
-      padding: 15px;
-      border-radius: 0;
-      margin-bottom: 20px;
-      border: 1px solid rgba(255,255,255,0.1);
-    }
-    
-    #playersList div {
-      padding: 10px;
-      margin: 5px 0;
-      background: rgba(255,255,255,0.05);
-      color: #fff;
-      font-size: 13px;
-      font-weight: 300;
-    }
-    
-    #inviteBox {
-      display: flex;
-      gap: 10px;
-      margin: 15px 0;
-    }
-    
-    #inviteBox input {
-      flex: 1;
-    }
-    
-    #inviteBtn {
-      width: auto;
-      padding: 14px 24px;
-      background: #fff;
-      color: #000;
-      font-size: 12px;
-    }
-    
-    #startGameBtn {
-      background: #fff;
-      color: #000;
-      margin-top: 15px;
-    }
-    
-    #leaveBtn, #backToLobbyBtn {
-      background: transparent;
-      color: #fff;
-      border: 1px solid #fff;
-    }
-    
-    /* Chat épuré */
-    #chat {
-      position: fixed;
-      right: 30px;
-      bottom: 30px;
-      width: 320px;
-      background: rgba(0,0,0,0.85);
-      padding: 20px;
-      border-radius: 0;
-      color: #fff;
-      z-index: 20;
-      border: 1px solid rgba(255,255,255,0.2);
-      backdrop-filter: blur(20px);
-    }
-    
-    #chatLog {
-      height: 150px;
-      overflow: auto;
-      font-size: 12px;
-      margin-bottom: 12px;
-      padding: 10px;
-      background: rgba(255,255,255,0.03);
-      border: 1px solid rgba(255,255,255,0.1);
-    }
-    
-    #chatLog div {
-      margin: 5px 0;
-      line-height: 1.5;
-      font-weight: 300;
-    }
-    
-    #chatLog b {
-      color: #fff;
-      font-weight: 700;
-    }
-    
-    #chatInput {
-      width: 100%;
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.2);
-      color: #fff;
-      padding: 10px;
-      font-size: 12px;
-    }
-    
-    /* HUD minimaliste */
-    #speedHUD, #weaponHUD, #timerHUD {
-      position: fixed;
-      background: rgba(0,0,0,0.75);
-      padding: 12px 20px;
-      color: #fff;
-      z-index: 19;
-      font-weight: 300;
-      font-size: 13px;
-      border: 1px solid rgba(255,255,255,0.2);
-      backdrop-filter: blur(10px);
-      letter-spacing: 1px;
-    }
-    
-    #speedHUD {
-      right: 30px;
-      top: 30px;
-    }
-    
-    #weaponHUD {
-      right: 30px;
-      top: 75px;
-    }
-    
-    #timerHUD {
-      top: 30px;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 28px;
-      font-weight: 700;
-      letter-spacing: 2px;
-    }
-    
-    /* Mobile controls */
-    .mobile-controls {
-      display: none;
-      position: fixed;
-      inset: 0;
-      z-index: 15;
-      pointer-events: none;
-    }
-    
-    .mobile-controls.active {
-      display: block;
-    }
-    
-    .joystick-container {
-      position: absolute;
-      left: 50px;
-      bottom: 50px;
-      width: 150px;
-      height: 150px;
-      pointer-events: all;
-    }
-    
-    .joystick-bg {
-      width: 100%;
-      height: 100%;
-      background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
-      border: 2px solid rgba(255,255,255,0.3);
-      border-radius: 50%;
-      position: relative;
-    }
-    
-    .joystick-stick {
-      width: 60px;
-      height: 60px;
-      background: rgba(255,255,255,0.8);
-      border-radius: 50%;
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      transition: all 0.1s;
-    }
-    
-    .mobile-btn {
-      position: absolute;
-      background: rgba(255,255,255,0.2);
-      border: 2px solid rgba(255,255,255,0.5);
-      border-radius: 50%;
-      color: #fff;
-      font-size: 20px;
-      font-weight: 700;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      pointer-events: all;
-      user-select: none;
-    }
-    
-    .mobile-btn:active {
-      background: rgba(255,255,255,0.4);
-    }
-    
-    .btn-shoot {
-      right: 50px;
-      bottom: 80px;
-      width: 80px;
-      height: 80px;
-    }
-    
-    .btn-aim {
-      right: 150px;
-      bottom: 50px;
-      width: 70px;
-      height: 70px;
-    }
-    
-    .btn-jump {
-      right: 50px;
-      bottom: 180px;
-      width: 60px;
-      height: 60px;
-    }
-    
-    .btn-reload {
-      right: 140px;
-      bottom: 160px;
-      width: 55px;
-      height: 55px;
-      font-size: 16px;
-    }
-    
-    /* Crosshair */
-    #crosshair {
-      position: fixed;
-      left: 50%;
-      top: 50%;
-      transform: translate(-50%, -50%);
-      width: 20px;
-      height: 20px;
-      z-index: 25;
-      pointer-events: none;
-    }
-    
-    #crosshair::before,
-    #crosshair::after {
-      content: '';
-      position: absolute;
-      background: rgba(255,255,255,0.8);
-    }
-    
-    #crosshair::before {
-      width: 2px;
-      height: 100%;
-      left: 50%;
-      transform: translateX(-50%);
-    }
-    
-    #crosshair::after {
-      height: 2px;
-      width: 100%;
-      top: 50%;
-      transform: translateY(-50%);
-    }
-    
-    #crosshair .center-dot {
-      position: absolute;
-      width: 3px;
-      height: 3px;
-      background: #fff;
-      border-radius: 50%;
-      left: 50%;
-      top: 50%;
-      transform: translate(-50%, -50%);
-    }
-    
-    /* Scope sniper */
-    #sniperScope {
-      position: fixed;
-      inset: 0;
-      display: none;
-      z-index: 24;
-      pointer-events: none;
-      background: transparent;
-    }
-    
-    #sniperScope.active {
-      display: block;
-    }
-    
-    #sniperScope .scope-circle {
-      position: absolute;
-      left: 50%;
-      top: 50%;
-      width: 400px;
-      height: 400px;
-      border: 3px solid #fff;
-      border-radius: 50%;
-      transform: translate(-50%, -50%);
-      box-shadow: 0 0 0 9999px rgba(0,0,0,0.9);
-      background: transparent;
-    }
-    
-    #sniperScope .scope-line-h,
-    #sniperScope .scope-line-v {
-      position: absolute;
-      background: rgba(255,255,255,0.7);
-    }
-    
-    #sniperScope .scope-line-h {
-      left: 50%;
-      top: 50%;
-      width: 400px;
-      height: 1px;
-      transform: translate(-50%, -50%);
-    }
-    
-    #sniperScope .scope-line-v {
-      left: 50%;
-      top: 50%;
-      width: 1px;
-      height: 400px;
-      transform: translate(-50%, -50%);
-    }
-    
-    #sniperScope .scope-center {
-      position: absolute;
-      left: 50%;
-      top: 50%;
-      width: 4px;
-      height: 4px;
-      background: #fff;
-      border-radius: 50%;
-      transform: translate(-50%, -50%);
-    }
-    
-    /* Damage indicators */
-    .damage-indicator {
-      position: fixed;
-      font-size: 32px;
-      font-weight: 900;
-      color: #ff0000;
-      text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
-      z-index: 30;
-      pointer-events: none;
-      animation: damageFloat 1s ease-out forwards;
-    }
-    
-    @keyframes damageFloat {
-      0% {
-        opacity: 1;
-        transform: translateY(0);
-      }
-      100% {
-        opacity: 0;
-        transform: translateY(-50px);
-      }
-    }
-    
-    #endScreen {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.95);
-      z-index: 30;
-      align-items: center;
-      justify-content: center;
-    }
-    
-    #endScreen.active {
-      display: flex;
-    }
-    
-    #endScreen > div {
-      background: rgba(0,0,0,0.95);
-      padding: 50px;
-      border: 1px solid #fff;
-      text-align: center;
-      max-width: 600px;
-      width: 90%;
-    }
-    
-    #endTitle {
-      font-size: 48px;
-      color: #fff;
-      margin-bottom: 25px;
-      font-weight: 900;
-      letter-spacing: 2px;
-    }
-    
-    #statsTable {
-      width: 100%;
-      margin: 30px 0;
-      color: #fff;
-      border-collapse: collapse;
-    }
-    
-    #statsTable th, #statsTable td {
-      padding: 15px;
-      text-align: left;
-      border-bottom: 1px solid rgba(255,255,255,0.1);
-    }
-    
-    #statsTable th {
-      font-weight: 700;
-      text-transform: uppercase;
-      font-size: 11px;
-      letter-spacing: 2px;
-      color: #888;
-    }
-    
-    #backToMenu, #backToLobbyBtn {
-      background: #fff;
-      color: #000;
-    }
-    
-    ::-webkit-scrollbar {
-      width: 6px;
-    }
-    
-    ::-webkit-scrollbar-track {
-      background: rgba(255,255,255,0.05);
-    }
-    
-    ::-webkit-scrollbar-thumb {
-      background: rgba(255,255,255,0.3);
-    }
-    
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
-    }
-    
-    #menu {
-      animation: fadeIn 0.3s ease;
-    }
-    
-    @media (max-width: 768px) {
-      #menu {
-        flex-direction: column;
-      }
-      
-      #menu .right-panel {
-        width: 100%;
-        height: 200px;
-      }
-      
-      #menu .left-panel {
-        border-right: none;
-        border-bottom: 1px solid rgba(255,255,255,0.1);
-      }
-      
-      .settings-btn {
-        top: 10px;
-        right: 10px;
-        padding: 10px 15px;
-      }
-    }
-    </style>
-<script>
-window.socket = io();
-console.log('Socket initialized:', window.socket);
-</script>
-<script src="main.js"></script>
-
-  </head>
+  <meta charset="UTF-8" />
+  <title>GOAT Battle Royale SIMULATOR</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700;900&display=swap');
+    
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      font-family: 'Roboto', sans-serif;
+      background: #0a0a0a;
+    }
+    
+    #canvas3d {
+      position: fixed;
+      inset: 0;
+      display: block;
+    }
+    
+    /* Menu professionnel noir & blanc */
+    #menu {
+      position: fixed;
+      inset: 0;
+      background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+      z-index: 50;
+      display: flex;
+      overflow: hidden;
+    }
+    
+    /* Settings button */
+    .settings-btn {
+      position: absolute;
+      top: 30px;
+      right: 30px;
+      background: transparent;
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.3);
+      padding: 12px 20px;
+      cursor: pointer;
+      font-size: 11px;
+      width: auto;
+      z-index: 51;
+      transition: all 0.2s;
+      border-radius: 2px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      font-family: 'Roboto', sans-serif;
+      font-weight: 700;
+    }
+    
+    .settings-btn:hover {
+      background: rgba(255,255,255,0.1);
+      border-color: #fff;
+      transform: translateY(-1px);
+    }
+    
+    #settingsModal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.95);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    #settingsModal.active {
+      display: flex;
+    }
+    
+    .settings-content {
+      background: #1a1a1a;
+      border: 1px solid rgba(255,255,255,0.2);
+      padding: 40px;
+      max-width: 600px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+    
+    .settings-content h2 {
+      color: #fff;
+      font-size: 32px;
+      margin-bottom: 30px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+    
+    .setting-item {
+      margin: 20px 0;
+      padding: 15px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    .setting-item label {
+      display: flex;
+      align-items: center;
+      color: #fff;
+      font-size: 14px;
+      cursor: pointer;
+    }
+  _
+    .setting-item input[type="checkbox"] {
+      width: auto;
+      margin-right: 15px;
+      cursor: pointer;
+    }
+    
+    .close-settings {
+      background: #fff;
+      color: #000;
+      margin-top: 30px;
+      width: 100%;
+      padding: 16px;
+      border: none;
+      cursor: pointer;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      font-family: 'Roboto', sans-serif;
+    }
+    
+    .close-settings:hover {
+      background: #f0f0f0;
+    }
+    
+    #menu .left-panel {
+      flex: 1;
+      padding: 60px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      border-right: 1px solid rgba(255,255,255,0.1);
+      overflow-y: auto;
+    }
+    
+    #menu .right-panel {
+      width: 500px;
+      background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    #menu .right-panel::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at center, rgba(255,255,255,0.05) 0%, transparent 70%);
+    }
+    
+    #goatPreview {
+      width: 100%;
+      height: 100%;
+    }
+    
+    #menu h1 {
+      font-size: 72px;
+  _     font-weight: 900;
+      color: #fff;
+      margin-bottom: 10px;
+      letter-spacing: -2px;
+      text-transform: uppercase;
+    }
+    
+    #menu .subtitle {
+      font-size: 18px;
+      color: #888;
+      font-weight: 300;
+      margin-bottom: 50px;
+      letter-spacing: 3px;
+    }
+    
+    .form-section {
+      max-width: 500px;
+    }
+    
+    .input-group {
+      margin-bottom: 24px;
+    }
+    
+    .input-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: #aaa;
+    }
+    
+    input, select {
+      width: 100%;
+      padding: 14px 18px;
+      border-radius: 2px;
+      border: 1px solid rgba(255,255,255,0.15);
+      font-size: 15px;
+      background: rgba(255,255,255,0.05);
+      color: #fff;
+      transition: all 0.2s;
+      font-family: 'Roboto', sans-serif;
+    }
+    
+    input:focus, select:focus {
+      outline: none;
+      border-color: #fff;
+      background: rgba(255,255,255,0.08);
+    }
+    
+    input::placeholder {
+      color: rgba(255,255,255,0.3);
+    }
+    
+    button {
+      width: 100%;
+      padding: 16px;
+      margin: 10px 0;
+      border-radius: 2px;
+      border: none;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      font-family: 'Roboto', sans-serif;
+    }
+    
+    #createRoomBtn {
+      background: #fff;
+      color: #000;
+    }
+    
+    #createRoomBtn:hover {
+      background: #f0f0f0;
+      transform: translateY(-1px);
+    }
+    
+    #joinRoomBtn {
+      background: transparent;
+      color: #fff;
+      border: 1px solid #fff;
+    }
+    
+    #joinRoomBtn:hover {
+      background: rgba(255,255,255,0.1);
+    }
+    
+    .divider {
+      text-align: center;
+      color: #555;
+      margin: 30px 0;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+    }
+    
+    .controls-info {
+      background: rgba(255,255,255,0.03);
+      padding: 20px;
+      margin-top: 30px;
+      font-size: 11px;
+      line-height: 1.8;
+      border: 1px solid rgba(255,255,255,0.1);
+      color: #888;
+    }
+    
+    .controls-info strong {
+      color: #fff;
+    }
+    
+    /* Lobby minimaliste */
+    #lobby {
+      position: fixed;
+      left: 30px;
+      top: 30px;
+      width: 350px;
+      background: rgba(0,0,0,0.85);
+      padding: 25px;
+      border-radius: 0;
+      border: 1px solid rgba(255,255,255,0.2);
+      backdrop-filter: blur(20px);
+      display: none;
+    }
+    
+    #lobby h3 {
+      color: #fff;
+      font-size: 20px;
+      margin-bottom: 20px;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+    
+    #roomLabel {
+      color: #888;
+      font-weight: 400;
+    }
+    
+    #playersList {
+      max-height: 180px;
+      overflow: auto;
+      background: rgba(255,255,255,0.03);
+      padding: 15px;
+      border-radius: 0;
+      margin-bottom: 20px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    #playersList div {
+      padding: 10px;
+      margin: 5px 0;
+      background: rgba(255,255,255,0.05);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 300;
+    }
+    
+    #inviteBox {
+      display: flex;
+      gap: 10px;
+      margin: 15px 0;
+  t  }
+    
+    #inviteBox input {
+      flex: 1;
+    }
+    
+    #inviteBtn {
+      width: auto;
+      padding: 14px 24px;
+      background: #fff;
+      color: #000;
+      font-size: 12px;
+    }
+    
+    #startGameBtn {
+      background: #fff;
+      color: #000;
+      margin-top: 15px;
+    }
+    
+    #leaveBtn, #backToLobbyBtn {
+t     background: transparent;
+      color: #fff;
+      border: 1px solid #fff;
+    }
+    
+    /* Chat épuré */
+    #chat {
+      position: fixed;
+      right: 30px;
+      bottom: 30px;
+      width: 320px;
+      background: rgba(0,0,0,0.85);
+      padding: 20px;
+      border-radius: 0;
+      color: #fff;
+      z-index: 20;
+      border: 1px solid rgba(255,255,255,0.2);
+      backdrop-filter: blur(20px);
+    }
+    
+    #chatLog {
+      height: 150px;
+      overflow: auto;
+      font-size: 12px;
+  m     margin-bottom: 12px;
+      padding: 10px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    #chatLog div {
+      margin: 5px 0;
+      line-height: 1.5;
+      font-weight: 300;
+    }
+    
+    #chatLog b {
+      color: #fff;
+      font-weight: 700;
+    }
+    
+    #chatInput {
+      width: 100%;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: #fff;
+      padding: 10px;
+      font-size: 12px;
+    }
+    
+    /* HUD minimaliste */
+    #speedHUD, #weaponHUD, #timerHUD {
+      position: fixed;
+      background: rgba(0,0,0,0.75);
+      padding: 12px 20px;
+      color: #fff;
+      z-index: 19;
+      font-weight: 300;
+      font-size: 13px;
+      border: 1px solid rgba(255,255,255,0.2);
+      backdrop-filter: blur(10px);
+      letter-spacing: 1px;
+    }
+    
+    #speedHUD {
+      right: 30px;
+      top: 30px;
+    }
+    
+    #weaponHUD {
+      right: 30px;
+      top: 75px;
+    }
+    
+    #timerHUD {
+      top: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: 2px;
+    }
+    
+    /* Mobile controls */
+    .mobile-controls {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 15;
+      pointer-events: none;
+    }
+    
+    .mobile-controls.active {
+      display: block;
+    }
+    
+    .joystick-container {
+      position: absolute;
+      left: 50px;
+      bottom: 50px;
+      width: 150px;
+      height: 150px;
+      pointer-events: all;
+    }
+    
+    .joystick-bg {
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+      border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 50%;
+      position: relative;
+    }
+    
+    .joystick-stick {
+      width: 60px;
+      height: 60px;
+Two     background: rgba(255,255,255,0.8);
+      border-radius: 50%;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      transition: all 0.1s;
+    }
+    
+    .mobile-btn {
+      position: absolute;
+      background: rgba(255,255,255,0.2);
+    CSS   border: 2px solid rgba(255,255,255,0.5);
+      border-radius: 50%;
+      color: #fff;
+      font-size: 20px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: all;
+      user-select: none;
+    }
+    
+    .mobile-btn:active {
+      background: rgba(255,255,255,0.4);
+A     }
+    
+    .btn-shoot {
+      right: 50px;
+      bottom: 80px;
+      width: 80px;
+      height: 80px;
+    }
+    
+    .btn-aim {
+      right: 150px;
+      bottom: 50px;
+      width: 70px;
+      height: 70px;
+    }
+    
+    .btn-jump {
+      right: 50px;
+      bottom: 180px;
+      width: 60px;
+      height: 60px;
+    }
+    
+    .btn-reload {
+      right: 140px;
+      bottom: 160px;
+      width: 55px;
+      height: 55px;
+      font-size: 16px;
+    }
+    
+    /* Crosshair */
+    #crosshair {
+      position: fixed;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 20px;
+      height: 20px;
+      z-index: 25;
+      pointer-events: none;
+    }
+    
+    #crosshair::before,
+    #crosshair::after {
+      content: '';
+      position: absolute;
+      background: rgba(255,255,255,0.8);
+tr     }
+    
+    #crosshair::before {
+      width: 2px;
+      height: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+    
+    #crosshair::after {
+      height: 2px;
+      width: 100%;
+    s   top: 50%;
+      transform: translateY(-50%);
+    }
+    
+    #crosshair .center-dot {
+      position: absolute;
+      width: 3px;
+      height: 3px;
+      background: #fff;
+Note       border-radius: 50%;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+    }
+    
+    /* Scope sniper */
+    #sniperScope {
+      position: fixed;
+      inset: 0;
+      display: none;
+      z-index: 24;
+      pointer-events: none;
+      background: transparent;
+    }
+    
+    #sniperScope.active {
+      display: block;
+    }
+    
+    #sniperScope .scope-circle {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 400px;
+      height: 400px;
+s       border: 3px solid #fff;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      box-shadow: 0 0 0 9999px rgba(0,0,0,0.9);
+      background: transparent;
+    }
+    
+    #sniperScope .scope-line-h,
+    #sniperScope .scope-line-v {
+      position: absolute;
+      background: rgba(255,255,255,0.7);
+seconds.     }
+    
+    #sniperScope .scope-line-h {
+      left: 50%;
+      top: 50%;
+      width: 400px;
+      height: 1px;
+      transform: translate(-50%, -50%);
+    }
+    
+    #sniperScope .scope-line-v {
+      left: 50%;
+      top: 50%;
+      width: 1px;
+      height: 400px;
+      transform: translate(-50%, -50%);
+    }
+    
+    #sniperScope .scope-center {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 4px;
+      height: 4px;
+      background: #fff;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+    }
+    
+    /* Damage indicators */
+    .damage-indicator {
+      position: fixed;
+      font-size: 32px;
+      font-weight: 900;
+      color: #ff0000;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+      z-index: 30;
+      pointer-events: none;
+      animation: damageFloat 1s ease-out forwards;
+    }
+    
+    @keyframes damageFloat {
+      0% {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      100% {
+        opacity: 0;
+        transform: translateY(-50px);
+      }
+    }
+    
+    #endScreen {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.95);
+m       z-index: 30;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    #endScreen.active {
+      display: flex;
+    }
+    
+    #endScreen > div {
+      background: rgba(0,0,0,0.95);
+      padding: 50px;
+      border: 1px solid #fff;
+      text-align: center;
+      max-width: 600px;
+      width: 90%;
+    }
+    
+    #endTitle {
+      font-size: 48px;
+      color: #fff;
+      margin-bottom: 25px;
+      font-weight: 900;
+      letter-spacing: 2px;
+    }
+    
+    #statsTable {
+      width: 100%;
+      margin: 30px 0;
+      color: #fff;
+      border-collapse: collapse;
+    }
+    
+    #statsTable th, #statsTable td {
+      padding: 15px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    #statsTable th {
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: #888;
+    }
+    
+    #backToMenu, #backToLobbyBtn {
+      background: #fff;
+      color: #000;
+    }
+    
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    
+    ::-webkit-scrollbar-track {
+className       background: rgba(255,255,255,0.05);
+    }
+    
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255,255,255,0.3);
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    
+    #menu {
+      animation: fadeIn 0.3s ease;
+    }
+    
+    @media (max-width: 768px) {
+      #menu {
+        flex-direction: column;
+      }
+      
+      #menu .right-panel {
+        width: 100%;
+        height: 200px;
+      }
+      
+      #menu .left-panel {
+Such         border-right: none;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+      }
+      
+      .settings-btn {
+        top: 10px;
+        right: 10px;
+        padding: 10px 15px;
+Note       }
+    }
+    </style>
+</head>
 <body>
-  <canvas id="canvas3d"></canvas>
-  
-  <!-- Menu professionnel -->
-  <div id="menu">
-    <button class="settings-btn" id="openSettings">⚙ SETTINGS</button>
-    
-    <div class="left-panel">
-      <h1>GOAT BR</h1>
-      <div class="subtitle">BATTLE ROYALE SIMULATOR</div>
-      
-      <div class="form-section">
-        <div class="input-group">
-          <label>Player Name</label>
-          <input id="pseudo" placeholder="Enter your unique username" maxlength="20" />
-        </div>
-        
-        <div class="input-group">
-          <label>Goat Color</label>
-          <input id="color" type="color" value="#ff9966" />
-        </div>
-        
-        <div class="input-group">
-          <label>Controls</label>
-          <select id="controls">
-            <option value="zqsd">ZQSD (FR)</option>
-            <option value="wasd">WASD (EN)</option>
-            <option value="arrows">Arrows</option>
-            <option value="mobile">Mobile Touch</option>
-          </select>
-        </div>
-        
-        <div class="input-group">
-          <label>Game Mode</label>
-          <select id="mode">
-            <option value="public">Public</option>
-            <option value="private">Private</option>
-          </select>
-        </div>
-        
-        <button id="createRoomBtn">Create Room</button>
-        
-        <div class="divider">OR JOIN EXISTING</div>
-        
-        <div class="input-group">
-          <input id="joinRoomId" placeholder="Room Code (e.g. ABC123)" />
-        </div>
-        <button id="joinRoomBtn">Join Room</button>
-        
-        <div class="controls-info">
-          <strong>CONTROLS:</strong><br>
-          Movement: ZQSD/WASD/Arrows | Sprint: <strong>Shift</strong><br>
-          Jump: <strong>V</strong> | Crouch: <strong>Ctrl</strong><br>
-          Shoot: <strong>E or Space</strong> | Aim: <strong>Hold H or C</strong><br>
-          Reload: <strong>R</strong> (Auto) | Switch: <strong>1, 2, 3</strong>
-        </div>
-      </div>
-    </div>
-    
-    <div class="right-panel">
-      <canvas id="goatPreview"></canvas>
-    </div>
-  </div>
-  
-  <!-- Settings Modal -->
-  <div id="settingsModal">
-    <div class="settings-content">
-      <h2>Settings</h2>
-      
-      <div class="setting-item">
-        <label>
-          <input type="checkbox" id="soundEnabled" checked>
-          Enable Sound Effects
-        </label>
-      </div>
-      
-      <div class="setting-item">
-        <label>
-          <input type="checkbox" id="motorSoundEnabled" checked>
-          Enable Motor Sound
-        </label>
-      </div>
-      
-      <div class="controls-info">
-        <strong>FULL CONTROLS GUIDE:</strong><br><br>
-        <strong>Movement:</strong> ZQSD / WASD / Arrows / Touch Joystick<br>
-        <strong>Sprint:</strong> Shift<br>
-        <strong>Jump:</strong> V<br>
-        <strong>Crouch:</strong> Ctrl<br>
-        <strong>Shoot:</strong> E or Space<br>
-        <strong>Aim:</strong> Hold H or C<br>
-        <strong>Reload:</strong> R (automatic when empty)<br>
-        <strong>Switch Weapon:</strong> 1 (Pistol), 2 (AK-47), 3 (Sniper)<br><br>
-        <strong>WEAPONS:</strong><br>
-        • Pistol: -20% damage, infinite ammo<br>
-        • AK-47: -15% damage, 30 bullets, auto-fire<br>
-        • Sniper: -30% body / -80% headshot, 1 bullet
-      </div>
-      
-      <button class="close-settings" id="closeSettings">Close</button>
-    </div>
-  </div>
-  
-  <!-- Mobile controls -->
-  <div class="mobile-controls" id="mobileControls">
-    <div class="joystick-container" id="joystickContainer">
-      <div class="joystick-bg">
-        <div class="joystick-stick" id="joystickStick"></div>
-      </div>
-    </div>
-    <div class="mobile-btn btn-shoot" id="mobileShoot">FIRE</div>
-    <div class="mobile-btn btn-aim" id="mobileAim">AIM</div>
-    <div class="mobile-btn btn-jump" id="mobileJump">J</div>
-    <div class="mobile-btn btn-reload" id="mobileReload">R</div>
-  </div>
-  
-  <!-- Lobby -->
-  <div id="lobby">
-    <h3>LOBBY <span id="roomLabel"></span></h3>
-    <div id="playersList"></div>
-    
-    <div id="inviteBox">
-      <input id="inviteName" placeholder="Username to invite" />
-      <button id="inviteBtn">Invite</button>
-    </div>
-    
-    <button id="startGameBtn">Start Match</button>
-    <button id="leaveBtn">Leave Room</button>
-  </div>
-  
-  <!-- Chat -->
-  <div id="chat">
-    <div id="chatLog"></div>
-    <input id="chatInput" placeholder="Type message..." />
-  </div>
-  
-  <!-- HUD -->
-  <div id="speedHUD">0 km/h | HP: 100% | Kills: 0</div>
-  <div id="weaponHUD">PISTOL | ∞</div>
-  <div id="timerHUD">5:00</div>
-  
-  <!-- Crosshair -->
-  <div id="crosshair">
-    <div class="center-dot"></div>
-  </div>
-  
-  <!-- Sniper Scope -->
-  <div id="sniperScope">
-    <div class="scope-circle"></div>
-    <div class="scope-line-h"></div>
-    <div class="scope-line-v"></div>
-    <div class="scope-center"></div>
-  </div>
-  
-  <!-- End Screen -->
-  <div id="endScreen">
-    <div>
-      <h2 id="endTitle">MATCH ENDED</h2>
-      <table id="statsTable">
-        <thead>
-          <tr>
-            <th>Rank</th>
-            <th>Player</th>
-            <th>Kills</th>
-            <th>Deaths</th>
-          </tr>
-        </thead>
-        <tbody id="statsBody"></tbody>
-      </table>
-      <button id="backToLobbyBtn">Back to Lobby</button>
-      <button id="backToMenu">Back to Menu</button>
-    </div>
-  </div>
-  
-  <script src="/socket.io/socket.io.js"></script>
-  <script type="importmap">
-    {
-      "imports": {
-        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
-      }
-    }
-  </script>
-  <script type="module">
-    import * as THREE from 'three';
-    window.THREE = THREE;
-    
-    // Initialiser Socket.io
-    window.socket = io({
-      reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
-      reconnectionAttempts: 10,
-      transports: ['websocket', 'polling']
-    });
-    
-    window.socket.on('connect', () => {
-      console.log('✅ Connecté au serveur:', window.socket.id);
-    });
-    
-    window.socket.on('connect_error', (error) => {
-      console.error('❌ Erreur de connexion:', error);
-    });
-    
-    // Charger le script main.js
-    const script = document.createElement('script');
-    script.type = 'module';
-    script.src = 'main.js';
-    document.body.appendChild(script);
-  </script>
+  <canvas id="canvas3d"></canvas>
+  
+    <div id="menu">
+    <button class="settings-btn" id="openSettings">⚙ SETTINGS</button>
+    
+    <div class="left-panel">
+      <h1>GOAT BR</h1>
+      <div class="subtitle">BATTLE ROYALE SIMULATOR</div>
+      
+      <div class="form-section">
+        <div class="input-group">
+          <label>Player Name</label>
+          <input id="pseudo" placeholder="Enter your unique username" maxlength="20" />
+        </div>
+        
+        <div class="input-group">
+          <label>Goat Color</label>
+          <input id="color" type="color" value="#ff9966" />
+s       </div>
+        
+        <div class="input-group">
+          <label>Controls</label>
+          <select id="controls">
+            <option value="zqsd">ZQSD (FR)</option>
+            <option value="wasd">WASD (EN)</option>
+            <option value="arrows">Arrows</option>
+            <option value="mobile">Mobile Touch</option>
+          </select>
+        </div>
+        
+        <div class="input-group">
+Read           <label>Game Mode</label>
+          <select id="mode">
+            <option value="public">Public</option>
+            <option value="private">Private</option>
+          </select>
+        </div>
+        
+        <button id="createRoomBtn">Create Room</button>
+        
+        <div class="divider">OR JOIN EXISTING</div>
+        
+        <div class="input-group">
+          <input id="joinRoomId" placeholder="Room Code (e.g. ABC123)" />
+        </div>
+        <button id="joinRoomBtn">Join Room</button>
+        
+        <div class="controls-info">
+          <strong>CONTROLS:</strong><br>
+MS           Movement: ZQSD/WASD/Arrows | Sprint: <strong>Shift</strong><br>
+          Jump: <strong>V</strong> | Crouch: <strong>Ctrl</strong><br>
+          Shoot: <strong>E or Space</strong> | Aim: <strong>Hold H or C</strong><br>
+          Reload: <strong>R</strong> (Auto) | Switch: <strong>1, 2, 3</strong>
+        </div>
+      </div>
+    </div>
+    
+    <div class="right-panel">
+      <canvas id="goatPreview"></canvas>
+    </div>
+  </div>
+  
+    <div id="settingsModal">
+    <div class="settings-content">
+      <h2>Settings</h2>
+      
+      <div class="setting-item">
+        <label>
+          <input type="checkbox" id="soundEnabled" checked>
+          Enable Sound Effects
+        </label>
+      </div>
+      
+      <div class="setting-item">
+        <label>
+          <input type="checkbox" id="motorSoundEnabled" checked>
+Note           Enable Motor Sound
+        </label>
+      </div>
+      
+      <div class="controls-info">
+        <strong>FULL CONTROLS GUIDE:</strong><br><br>
+        <strong>Movement:</strong> ZQSD / WASD / Arrows / Touch Joystick<br>
+        <strong>Sprint:</strong> Shift<br>
+        <strong>Jump:</strong> V<br>
+        <strong>Crouch:</strong> Ctrl<br>
+        <strong>Shoot:</strong> E or Space<br>
+        <strong>Aim:</strong> Hold H or C<br>
+        <strong>Reload:</strong> R (automatic when empty)<br>
+        <strong>Switch Weapon:</strong> 1 (Pistol), 2 (AK-47), 3 (Sniper)<br><br>
+        <strong>WEAPONS:</strong><br>
+        • Pistol: -20% damage, infinite ammo<br>
+        • AK-47: -15% damage, 30 bullets, auto-fire<br>
+        • Sniper: -30% body / -80% headshot, 1 bullet
+      </div>
+      
+      <button class="close-settings" id="closeSettings">Close</button>
+    </div>
+  </div>
+  
+    <div class="mobile-controls" id="mobileControls">
+    <div class="joystick-container" id="joystickContainer">
+      <div class="joystick-bg">
+        <div class="joystick-stick" id="joystickStick"></div>
+      </div>
+    </div>
+    <div class="mobile-btn btn-shoot" id="mobileShoot">FIRE</div>
+    <div class="mobile-btn btn-aim" id="mobileAim">AIM</div>
+    <div class="mobile-btn btn-jump" id="mobileJump">J</div>
+    <div class="mobile-btn btn-reload" id="mobileReload">R</div>
+Two   </div>
+  
+    <div id="lobby">
+    <h3>LOBBY <span id="roomLabel"></span></h3>
+    <div id="playersList"></div>
+    
+    <div id="inviteBox">
+      <input id="inviteName" placeholder="Username to invite" />
+      <button id="inviteBtn">Invite</button>
+    </div>
+    
+    <button id="startGameBtn">Start Match</button>
+    <button id="leaveBtn">Leave Room</button>
+  </div>
+  
+    <div id="chat">
+    <div id="chatLog"></div>
+css     <input id="chatInput" placeholder="Type message..." />
+  </div>
+  
+    <div id="speedHUD">0 km/h | HP: 100% | Kills: 0</div>
+  <div id="weaponHUD">PISTOL | ∞</div>
+  <div id="timerHUD">5:00</div>
+  
+    <div id="crosshair">
+    <div class="center-dot"></div>
+  </div>
+  
+    <div id="sniperScope">
+    <div class="scope-circle"></div>
+    <div class="scope-line-h"></div>
+    <div class="scope-line-v"></div>
+    <div class="scope-center"></div>
+  </div>
+  
+    <div id="endScreen">
+s     <div>
+      <h2 id="endTitle">MATCH ENDED</h2>
+      <table id="statsTable">
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>Player</th>
+            <th>Kills</th>
+            <th>Deaths</th>
+          </tr>
+  s       </thead>
+        <tbody id="statsBody"></tbody>
+      </table>
+      <button id="backToLobbyBtn">Back to Lobby</button>
+      <button id="backToMenu">Back to Menu</button>
+    </div>
+  </div>
+  
+    <script src="/socket.io/socket.io.js"></script>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+      }
+    }
+  </script>
+  <script type="module">
+    import * as THREE from 'three';
+    window.THREE = THREE;
+    
+    // Initialiser Socket.io
+    window.socket = io({
+      reconnection: true,
+Comment       reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      reconnectionAttempts: 10,
+      transports: ['websocket', 'polling']
+    });
+    
+    window.socket.on('connect', () => {
+      console.log('✅ Connecté au serveur:', window.socket.id);
+    });
+    
+    window.socket.on('connect_error', (error) => {
+      console.error('❌ Erreur de connexion:', error);
+    });
+    
+    // Charger le script main.js
+    const script = document.createElement('script');
+    script.type = 'module';
+    script.src = 'main.js';
+    document.body.appendChild(script);
+  </script>
 </body>
 </html>
