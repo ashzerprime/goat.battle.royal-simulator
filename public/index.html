@@ -924,7 +924,7 @@
     </div>
   </div>
   
-  <script src="/socket.io/socket.io.js"></script>
+ <script src="/socket.io/socket.io.js"></script>
   <script type="importmap">
     {
       "imports": {
@@ -936,28 +936,30 @@
     import * as THREE from 'three';
     window.THREE = THREE;
     
-    // Initialiser Socket.io
-    window.socket = io({
-      reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
-      reconnectionAttempts: 10,
-      transports: ['websocket', 'polling']
+    // Attendre que le DOM soit complètement chargé
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('✅ DOM loaded');
+      
+      // Initialiser Socket.io
+      window.socket = io({
+        reconnection: true,
+        reconnectionDelay: 1000,
+        transports: ['websocket', 'polling']
+      });
+      
+      window.socket.on('connect', () => {
+        console.log('✅ Connected:', window.socket.id);
+      });
+      
+      // Charger main.js après initialisation
+      setTimeout(() => {
+        const script = document.createElement('script');
+        script.type = 'module';
+        script.src = 'main.js';
+        document.body.appendChild(script);
+        console.log('✅ main.js loading...');
+      }, 100);
     });
-    
-    window.socket.on('connect', () => {
-      console.log('✅ Connecté au serveur:', window.socket.id);
-    });
-    
-    window.socket.on('connect_error', (error) => {
-      console.error('❌ Erreur de connexion:', error);
-    });
-    
-    // Charger le script main.js
-    const script = document.createElement('script');
-    script.type = 'module';
-    script.src = 'main.js';
-    document.body.appendChild(script);
   </script>
 </body>
 </html>
