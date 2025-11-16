@@ -1,30 +1,27 @@
 /* main.js - VERSION COMPLÈTE CORRIGÉE
-   Toutes les corrections appliquées :
-   - Balles qui partent correctement
-   - Recharge automatique
-   - Munitions infinies après rechargement
-   - Dégâts corrects (9mm: -20%, Sniper headshot: -80%/body: -30%, AK-47: -15%)
-   - IA qui bougent et attaquent
-   - Collisions entre joueurs
-   - Invitations fonctionnelles
-   - Fin de partie après 5min avec stats
-   - Mode tactile avec joystick
-   - Vrais sons d'armes
-   - Douilles visibles
-   - Armes visibles sur le joueur
-   - Validation pseudos (anti-NSFW/nazi/raciste)
-   - Scope sniper sans zone sombre
-   - Options son dans settings
-   - Three.js ES6 modules (fix deprecated warning)
-   - Socket.io avec reconnection automatique
+   Toutes les corrections appliquées
 */
 
-// Attendre que socket soit disponible
-let socket = window.socket;
-if (!socket) {
-  console.error('Socket.io not initialized!');
-  alert('Server connection failed. Please refresh the page.');
+// Récupérer THREE et socket depuis window
+const THREE = window.THREE;
+const socket = window.socket;
+
+if (!THREE) {
+  console.error('THREE.js not loaded!');
 }
+
+if (!socket) {
+  console.error('Socket.io not loaded!');
+  alert('Erreur de connexion au serveur. Veuillez rafraîchir la page.');
+}
+
+// UI refs
+const menu = document.getElementById('menu');
+const goatPreview = document.getElementById('goatPreview');
+const lobbyUi = document.getElementById('lobby');
+const chatLog = document.getElementById('chatLog');
+const chatInput = document.getElementById('chatInput');
+const mobileControls = document.getElementById('mobileControls');
 
 // UI
 const createRoomBtn = document.getElementById('createRoomBtn');
@@ -51,6 +48,28 @@ const backToLobbyBtn = document.getElementById('backToLobbyBtn');
 const statsBody = document.getElementById('statsBody');
 const soundEnabledCheck = document.getElementById('soundEnabled');
 const motorSoundEnabledCheck = document.getElementById('motorSoundEnabled');
+const openSettings = document.getElementById('openSettings');
+const closeSettings = document.getElementById('closeSettings');
+const settingsModal = document.getElementById('settingsModal');
+
+// Settings buttons
+openSettings.onclick = () => {
+  console.log('Opening settings...');
+  settingsModal.classList.add('active');
+};
+
+closeSettings.onclick = () => {
+  console.log('Closing settings...');
+  settingsModal.classList.remove('active');
+};
+
+// Mobile
+const joystickContainer = document.getElementById('joystickContainer');
+const joystickStick = document.getElementById('joystickStick');
+const mobileShoot = document.getElementById('mobileShoot');
+const mobileAim = document.getElementById('mobileAim');
+const mobileJump = document.getElementById('mobileJump');
+const mobileReload = document.getElementById('mobileReload');
 
 // Mobile
 const joystickContainer = document.getElementById('joystickContainer');
@@ -1020,42 +1039,82 @@ function reload() {
 
 // Network events
 createRoomBtn.onclick = () => {
+  console.log('🔵 CREATE ROOM button clicked');
+  console.log('Socket status:', socket ? 'OK' : 'NOT FOUND');
+  console.log('Socket connected:', socket?.connected);
+  console.log('Socket ID:', socket?.id);
+  
   const name = createName.value.trim();
-  if (!name) return alert('Choose a username');
+  console.log('Player name:', name);
+  
+  if (!name) {
+    console.log('❌ No name provided');
+    return alert('Choose a username');
+  }
+  
   myName = name;
   myColor = createColor.value || '#ff9966';
   controlMode = controlsSelect.value;
   isMobileMode = controlMode === 'mobile';
   
+  console.log('📤 Sending create_room to server...');
+  console.log('Data:', { name, color: myColor, mode: modeSelect.value });
+  
   socket.emit('create_room', { name, color: myColor, mode: modeSelect.value }, (res) => {
+    console.log('📥 Server response:', res);
+    
     if (res && res.ok) {
+      console.log('✅ Room created:', res.roomId);
       myRoom = res.roomId;
       amIHost = true;
       showLobby(res.roomId);
       spawnLocal(name, myColor);
     } else {
+      console.log('❌ Room creation failed:', res?.error);
       alert(res && res.error ? res.error : 'Creation error');
     }
   });
 };
 
 joinRoomBtn.onclick = () => {
+  console.log('🔵 JOIN ROOM button clicked');
+  console.log('Socket status:', socket ? 'OK' : 'NOT FOUND');
+  console.log('Socket connected:', socket?.connected);
+  
   const name = createName.value.trim();
   const rid = joinRoomId.value.trim();
-  if (!name) return alert('Choose a username');
-  if (!rid) return alert('Enter room code');
+  
+  console.log('Player name:', name);
+  console.log('Room ID:', rid);
+  
+  if (!name) {
+    console.log('❌ No name provided');
+    return alert('Choose a username');
+  }
+  if (!rid) {
+    console.log('❌ No room ID provided');
+    return alert('Enter room code');
+  }
+  
   myName = name;
   myColor = createColor.value || '#ff9966';
   controlMode = controlsSelect.value;
   isMobileMode = controlMode === 'mobile';
   
+  console.log('📤 Sending join_room to server...');
+  console.log('Data:', { roomId: rid, name, color: myColor });
+  
   socket.emit('join_room', { roomId: rid, name, color: myColor }, (res) => {
+    console.log('📥 Server response:', res);
+    
     if (res && res.ok) {
+      console.log('✅ Joined room:', res.roomId);
       myRoom = res.roomId;
       amIHost = false;
       showLobby(res.roomId);
       spawnLocal(name, myColor);
     } else {
+      console.log('❌ Join failed:', res?.error);
       alert(res && res.error ? res.error : 'Cannot join');
     }
   });
@@ -1200,9 +1259,15 @@ socket.on('fire', ({ shooter, x, y, z, dir, weapon }) => {
 });
 
 function showLobby(roomId) {
+  console.log('📺 Showing lobby for room:', roomId);
   menu.style.display = 'none';
   lobbyUi.style.display = 'block';
   roomLabel.textContent = `${roomId}`;
+  
+  // Show mobile controls if mobile mode
+  if (isMobileMode) {
+    mobileControls.classList.add('active');
+  }
 }
 
 function escapeHtml(s) {
