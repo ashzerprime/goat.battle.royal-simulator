@@ -500,6 +500,69 @@ function initGame() {
     });
   };
 
+  // Lobby buttons
+  inviteBtn.onclick = () => {
+    console.log('🔵 INVITE clicked');
+    const target = inviteName.value.trim();
+    if (!target) {
+      alert('Enter username to invite');
+      return;
+    }
+    socket.emit('invite', { targetName: target }, (res) => {
+      if (res && res.ok) {
+        appendChat('SYSTEM', `Invitation sent to ${target}`);
+      } else {
+        appendChat('SYSTEM', res?.error || 'Invite failed');
+      }
+    });
+  };
+
+  leaveBtn.onclick = () => {
+    console.log('🔵 LEAVE clicked');
+    socket.emit('leave_room', {}, () => {
+      location.reload();
+    });
+  };
+
+  startGameBtn.onclick = () => {
+    console.log('🔵 START GAME clicked');
+    if (!amIHost) {
+      alert('Only host can start');
+      return;
+    }
+    socket.emit('start_match', { aiCount: 12 });
+  };
+
+  backToLobbyBtn.onclick = () => {
+    console.log('🔵 BACK TO LOBBY clicked');
+    endScreen.classList.remove('active');
+    lobbyUi.style.display = 'block';
+    matchStartTime = null;
+  };
+
+  backToMenu.onclick = () => {
+    console.log('🔵 BACK TO MENU clicked');
+    location.reload();
+  };
+
+  // Chat
+  function appendChat(name, text) {
+    const d = document.createElement('div');
+    d.innerHTML = `<b>${escapeHtml(name)}:</b> ${escapeHtml(text)}`;
+    chatLog.appendChild(d);
+    chatLog.scrollTop = chatLog.scrollHeight;
+  }
+
+  chatInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      const t = chatInput.value.trim();
+      if (!t || !myRoom) return;
+      console.log('📤 Sending chat:', t);
+      socket.emit('lobby_chat', { text: t });
+      chatInput.value = '';
+    }
+  });
+
   function showLobby(roomId) {
     console.log('📺 Showing lobby:', roomId);
     menu.style.display = 'none';
@@ -517,14 +580,14 @@ function initGame() {
 
   // Socket events
   socket.on('joined_room', ({ roomId, isHost }) => {
-    console.log('Joined room:', roomId);
+    console.log('✅ Joined room:', roomId);
     myRoom = roomId;
     amIHost = isHost;
     showLobby(roomId);
   });
 
   socket.on('room_update', (room) => {
-    console.log('Room update:', room);
+    console.log('📊 Room update:', room);
     playersList.innerHTML = '';
     roomLabel.textContent = room.roomId;
     
@@ -534,6 +597,55 @@ function initGame() {
       div.textContent = `${p.name}${sid === socket.id ? ' (You)' : ''}${room.host === sid ? ' [HOST]' : ''}`;
       playersList.appendChild(div);
     }
+  });
+
+  socket.on('lobby_chat', ({ name, text }) => {
+    console.log('💬 Chat received:', name, text);
+    appendChat(name, text);
+  });
+
+  socket.on('invite_request', ({ fromName, roomId }) => {
+    console.log('📨 Invite request from:', fromName);
+    const accept = confirm(`${fromName} invites you to room ${roomId}. Accept?`);
+    socket.emit('invite_response', { fromName, roomId, accept });
+  });
+
+  socket.on('invite_accepted', ({ from, accept }) => {
+    console.log('📬 Invite response from:', from, accept);
+    appendChat('SYSTEM', `${from} ${accept ? 'accepted' : 'declined'} your invitation`);
+  });
+
+  socket.on('match_started', ({ IA }) => {
+    console.log('🎮 Match started with', IA?.length || 0, 'AI');
+    menu.style.display = 'none';
+    lobbyUi.style.display = 'none';
+    matchStartTime = Date.now();
+    
+    if (isMobileMode) {
+      mobileControls.classList.add('active');
+    }
+    
+    appendChat('SYSTEM', 'Match started! 5 minutes countdown begins!');
+  });
+
+  socket.on('match_ended', ({ stats }) => {
+    console.log('🏁 Match ended');
+    matchStartTime = null;
+    endScreen.classList.add('active');
+    
+    statsBody.innerHTML = '';
+    stats.forEach((stat, idx) => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${idx + 1}</td>
+        <td>${escapeHtml(stat.name)}${stat.id === socket.id ? ' (You)' : ''}</td>
+        <td>${stat.kills}</td>
+        <td>${stat.deaths}</td>
+      `;
+      statsBody.appendChild(row);
+    });
+    
+    appendChat('SYSTEM', 'Match ended!');
   });
 
   // Game loop
